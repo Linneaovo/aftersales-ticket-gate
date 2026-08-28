@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+data/traces/
+data/runs.db
+data/checkpoints.db
+.pytest_cache/
+.streamlit/

@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Pytest (offline FakeRag — 生产路径 langgraph)
+        run: python -m pytest -q -m "not integration"
+
+      - name: Offline smoke baseline (DemoRag + compare appendix)
+        run: python scripts/smoke_with_rag.py --offline
+
+      - name: Streamlit syntax check
+        run: python -m py_compile app/ui/streamlit_app.py

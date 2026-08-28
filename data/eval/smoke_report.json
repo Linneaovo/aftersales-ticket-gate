@@ -1,0 +1,857 @@
+{
+  "mode": "live",
+  "engine": "langgraph",
+  "health": {
+    "status": "ok",
+    "degraded": false,
+    "ollama": null,
+    "embedder": null,
+    "demo_kb": null
+  },
+  "cases": [
+    {
+      "playbook_id": "p1_xingsha_h103",
+      "passed": true,
+      "diffs": [],
+      "validation": {
+        "passed": true,
+        "diffs": [],
+        "actual": {
+          "status": "waiting_hitl",
+          "intent": "fault_dispatch",
+          "trace_nodes": [
+            "engine_selected",
+            "supervisor",
+            "rag",
+            "supervisor",
+            "quality",
+            "supervisor",
+            "parts",
+            "supervisor",
+            "hitl"
+          ],
+          "rag_linkage": [
+            "ask",
+            "retrieve",
+            "ask.work_order"
+          ],
+          "hitl_reasons": [
+            "[POL-PARTS-01] 配件缺料须人确调拨或改约: 建议：经开备件周转点调拨 · 预计 4h · 联系电话 0731-8888-5600"
+          ]
+        },
+        "expected": {
+          "status": "waiting_hitl",
+          "intent": "fault_dispatch",
+          "trace_prefix": [
+            "supervisor",
+            "rag",
+            "quality",
+            "work_order",
+            "parts",
+            "hitl"
+          ],
+          "hitl_reasons": [
+            "POL-PARTS-01"
+          ]
+        }
+      },
+      "actual": {
+        "status": "waiting_hitl",
+        "intent": "fault_dispatch",
+        "trace_nodes": [
+          "engine_selected",
+          "supervisor",
+          "rag",
+          "supervisor",
+          "quality",
+          "supervisor",
+          "parts",
+          "supervisor",
+          "hitl"
+        ],
+        "rag_linkage": [
+          "ask",
+          "retrieve",
+          "ask.work_order"
+        ],
+        "hitl_reasons": [
+          "[POL-PARTS-01] 配件缺料须人确调拨或改约: 建议：经开备件周转点调拨 · 预计 4h · 联系电话 0731-8888-5600"
+        ]
+      },
+      "status": "waiting_hitl",
+      "intent": "fault_dispatch",
+      "linkage": [
+        "ask",
+        "retrieve",
+        "ask.work_order"
+      ],
+      "linkage_detail": {
+        "ask": {
+          "request_id": "245ff12f9e0a437d",
+          "grounded": true
+        }
+      },
+      "trace_nodes": [
+        "engine_selected",
+        "supervisor",
+        "rag",
+        "supervisor",
+        "quality",
+        "supervisor",
+        "parts",
+        "supervisor",
+        "hitl"
+      ],
+      "after_chief_approve": {
+        "status": "succeeded",
+        "submit_eligible": true
+      },
+      "inbox_count": 3
+    },
+    {
+      "playbook_id": "p2_warranty_conflict",
+      "passed": false,
+      "diffs": [
+        {
+          "field": "status",
+          "expected": "waiting_hitl",
+          "actual": "rejected"
+        },
+        {
+          "field": "trace_node",
+          "expected": "hitl",
+          "actual": [
+            "engine_selected",
+            "supervisor",
+            "rag",
+            "supervisor",
+            "quality",
+            "supervisor"
+          ]
+        },
+        {
+          "field": "hitl_reason",
+          "expected": "POL-CONFLICT-01",
+          "actual": ""
+        }
+      ],
+      "validation": {
+        "passed": false,
+        "diffs": [
+          {
+            "field": "status",
+            "expected": "waiting_hitl",
+            "actual": "rejected"
+          },
+          {
+            "field": "trace_node",
+            "expected": "hitl",
+            "actual": [
+              "engine_selected",
+              "supervisor",
+              "rag",
+              "supervisor",
+              "quality",
+              "supervisor"
+            ]
+          },
+          {
+            "field": "hitl_reason",
+            "expected": "POL-CONFLICT-01",
+            "actual": ""
+          }
+        ],
+        "actual": {
+          "status": "rejected",
+          "intent": "conflict_review",
+          "trace_nodes": [
+            "engine_selected",
+            "supervisor",
+            "rag",
+            "supervisor",
+            "quality",
+            "supervisor"
+          ],
+          "rag_linkage": [
+            "ask",
+            "retrieve"
+          ],
+          "hitl_reasons": []
+        },
+        "expected": {
+          "status": "waiting_hitl",
+          "intent": "conflict_review",
+          "trace_prefix": [
+            "supervisor",
+            "rag",
+            "quality",
+            "hitl"
+          ],
+          "hitl_reasons": [
+            "POL-CONFLICT-01"
+          ]
+        }
+      },
+      "actual": {
+        "status": "rejected",
+        "intent": "conflict_review",
+        "trace_nodes": [
+          "engine_selected",
+          "supervisor",
+          "rag",
+          "supervisor",
+          "quality",
+          "supervisor"
+        ],
+        "rag_linkage": [
+          "ask",
+          "retrieve"
+        ],
+        "hitl_reasons": []
+      },
+      "status": "rejected",
+      "intent": "conflict_review",
+      "linkage": [
+        "ask",
+        "retrieve"
+      ],
+      "linkage_detail": {
+        "ask": {
+          "request_id": "139ed73f3d6d4f87",
+          "grounded": false
+        }
+      },
+      "trace_nodes": [
+        "engine_selected",
+        "supervisor",
+        "rag",
+        "supervisor",
+        "quality",
+        "supervisor"
+      ]
+    },
+    {
+      "playbook_id": "p3_acl_salary",
+      "passed": true,
+      "diffs": [],
+      "validation": {
+        "passed": true,
+        "diffs": [],
+        "actual": {
+          "status": "rejected",
+          "intent": "acl_probe",
+          "trace_nodes": [
+            "engine_selected",
+            "supervisor"
+          ],
+          "rag_linkage": [],
+          "hitl_reasons": []
+        },
+        "expected": {
+          "status": "rejected",
+          "intent": "acl_probe",
+          "trace_prefix": [
+            "supervisor"
+          ],
+          "hitl_reasons": null
+        }
+      },
+      "actual": {
+        "status": "rejected",
+        "intent": "acl_probe",
+        "trace_nodes": [
+          "engine_selected",
+          "supervisor"
+        ],
+        "rag_linkage": [],
+        "hitl_reasons": []
+      },
+      "status": "rejected",
+      "intent": "acl_probe",
+      "linkage": [],
+      "linkage_detail": {},
+      "trace_nodes": [
+        "engine_selected",
+        "supervisor"
+      ]
+    },
+    {
+      "playbook_id": "p4_manual_only",
+      "passed": false,
+      "diffs": [
+        {
+          "field": "status",
+          "expected": "succeeded",
+          "actual": "rejected"
+        }
+      ],
+      "validation": {
+        "passed": false,
+        "diffs": [
+          {
+            "field": "status",
+            "expected": "succeeded",
+            "actual": "rejected"
+          }
+        ],
+        "actual": {
+          "status": "rejected",
+          "intent": "knowledge_only",
+          "trace_nodes": [
+            "engine_selected",
+            "supervisor",
+            "rag",
+            "supervisor",
+            "quality",
+            "supervisor"
+          ],
+          "rag_linkage": [
+            "ask",
+            "retrieve",
+            "ask.work_order"
+          ],
+          "hitl_reasons": []
+        },
+        "expected": {
+          "status": "succeeded",
+          "intent": "knowledge_only",
+          "trace_prefix": [
+            "supervisor",
+            "rag",
+            "quality"
+          ],
+          "hitl_reasons": null
+        }
+      },
+      "actual": {
+        "status": "rejected",
+        "intent": "knowledge_only",
+        "trace_nodes": [
+          "engine_selected",
+          "supervisor",
+          "rag",
+          "supervisor",
+          "quality",
+          "supervisor"
+        ],
+        "rag_linkage": [
+          "ask",
+          "retrieve",
+          "ask.work_order"
+        ],
+        "hitl_reasons": []
+      },
+      "status": "rejected",
+      "intent": "knowledge_only",
+      "linkage": [
+        "ask",
+        "retrieve",
+        "ask.work_order"
+      ],
+      "linkage_detail": {
+        "ask": {
+          "request_id": "e97aec3e78fa4b38",
+          "grounded": true
+        }
+      },
+      "trace_nodes": [
+        "engine_selected",
+        "supervisor",
+        "rag",
+        "supervisor",
+        "quality",
+        "supervisor"
+      ]
+    },
+    {
+      "playbook_id": "p5_parts_shortage",
+      "passed": true,
+      "diffs": [],
+      "validation": {
+        "passed": true,
+        "diffs": [],
+        "actual": {
+          "status": "waiting_hitl",
+          "intent": "fault_dispatch",
+          "trace_nodes": [
+            "engine_selected",
+            "supervisor",
+            "rag",
+            "supervisor",
+            "quality",
+            "supervisor",
+            "parts",
+            "supervisor",
+            "hitl"
+          ],
+          "rag_linkage": [
+            "ask",
+            "retrieve",
+            "ask.work_order"
+          ],
+          "hitl_reasons": [
+            "[POL-PARTS-01] 配件缺料须人确调拨或改约: 建议：经开备件周转点调拨 · 预计 4h · 联系电话 0731-8888-5600"
+          ]
+        },
+        "expected": {
+          "status": "waiting_hitl",
+          "intent": "fault_dispatch",
+          "trace_prefix": [
+            "supervisor",
+            "rag",
+            "quality",
+            "work_order",
+            "parts",
+            "hitl"
+          ],
+          "hitl_reasons": [
+            "POL-PARTS-01"
+          ]
+        }
+      },
+      "actual": {
+        "status": "waiting_hitl",
+        "intent": "fault_dispatch",
+        "trace_nodes": [
+          "engine_selected",
+          "supervisor",
+          "rag",
+          "supervisor",
+          "quality",
+          "supervisor",
+          "parts",
+          "supervisor",
+          "hitl"
+        ],
+        "rag_linkage": [
+          "ask",
+          "retrieve",
+          "ask.work_order"
+        ],
+        "hitl_reasons": [
+          "[POL-PARTS-01] 配件缺料须人确调拨或改约: 建议：经开备件周转点调拨 · 预计 4h · 联系电话 0731-8888-5600"
+        ]
+      },
+      "status": "waiting_hitl",
+      "intent": "fault_dispatch",
+      "linkage": [
+        "ask",
+        "retrieve",
+        "ask.work_order"
+      ],
+      "linkage_detail": {
+        "ask": {
+          "request_id": "60e9b78190c04687",
+          "grounded": true
+        }
+      },
+      "trace_nodes": [
+        "engine_selected",
+        "supervisor",
+        "rag",
+        "supervisor",
+        "quality",
+        "supervisor",
+        "parts",
+        "supervisor",
+        "hitl"
+      ]
+    },
+    {
+      "playbook_id": "p6_chitchat",
+      "passed": true,
+      "diffs": [],
+      "validation": {
+        "passed": true,
+        "diffs": [],
+        "actual": {
+          "status": "rejected",
+          "intent": "chitchat",
+          "trace_nodes": [
+            "engine_selected",
+            "supervisor"
+          ],
+          "rag_linkage": [],
+          "hitl_reasons": []
+        },
+        "expected": {
+          "status": "rejected",
+          "intent": "chitchat",
+          "trace_prefix": [
+            "supervisor"
+          ],
+          "hitl_reasons": null
+        }
+      },
+      "actual": {
+        "status": "rejected",
+        "intent": "chitchat",
+        "trace_nodes": [
+          "engine_selected",
+          "supervisor"
+        ],
+        "rag_linkage": [],
+        "hitl_reasons": []
+      },
+      "status": "rejected",
+      "intent": "chitchat",
+      "linkage": [],
+      "linkage_detail": {},
+      "trace_nodes": [
+        "engine_selected",
+        "supervisor"
+      ]
+    },
+    {
+      "playbook_id": "p7_second_visit_shortage",
+      "passed": true,
+      "diffs": [],
+      "validation": {
+        "passed": true,
+        "diffs": [],
+        "actual": {
+          "status": "waiting_hitl",
+          "intent": "fault_dispatch",
+          "trace_nodes": [
+            "engine_selected",
+            "supervisor",
+            "rag",
+            "supervisor",
+            "quality",
+            "supervisor",
+            "parts",
+            "supervisor",
+            "hitl"
+          ],
+          "rag_linkage": [
+            "ask",
+            "retrieve",
+            "ask.work_order"
+          ],
+          "hitl_reasons": [
+            "[POL-PARTS-01] 配件缺料须人确调拨或改约: 建议：经开备件周转点调拨 · 预计 4h · 联系电话 0731-8888-5600",
+            "[POL-SLA-01] 二次进站须站长人确后方可提交",
+            "[POL-SLA-02] 紧急/首响窗口须站长确认响应安排: 首响4小时内"
+          ]
+        },
+        "expected": {
+          "status": "waiting_hitl",
+          "intent": "fault_dispatch",
+          "trace_prefix": [
+            "supervisor",
+            "rag",
+            "quality",
+            "work_order",
+            "parts",
+            "hitl"
+          ],
+          "hitl_reasons": [
+            "POL-SLA-01",
+            "POL-SLA-02",
+            "POL-PARTS-01"
+          ]
+        }
+      },
+      "actual": {
+        "status": "waiting_hitl",
+        "intent": "fault_dispatch",
+        "trace_nodes": [
+          "engine_selected",
+          "supervisor",
+          "rag",
+          "supervisor",
+          "quality",
+          "supervisor",
+          "parts",
+          "supervisor",
+          "hitl"
+        ],
+        "rag_linkage": [
+          "ask",
+          "retrieve",
+          "ask.work_order"
+        ],
+        "hitl_reasons": [
+          "[POL-PARTS-01] 配件缺料须人确调拨或改约: 建议：经开备件周转点调拨 · 预计 4h · 联系电话 0731-8888-5600",
+          "[POL-SLA-01] 二次进站须站长人确后方可提交",
+          "[POL-SLA-02] 紧急/首响窗口须站长确认响应安排: 首响4小时内"
+        ]
+      },
+      "status": "waiting_hitl",
+      "intent": "fault_dispatch",
+      "linkage": [
+        "ask",
+        "retrieve",
+        "ask.work_order"
+      ],
+      "linkage_detail": {
+        "ask": {
+          "request_id": "323a8e8b404f421b",
+          "grounded": true
+        }
+      },
+      "trace_nodes": [
+        "engine_selected",
+        "supervisor",
+        "rag",
+        "supervisor",
+        "quality",
+        "supervisor",
+        "parts",
+        "supervisor",
+        "hitl"
+      ]
+    },
+    {
+      "playbook_id": "p8_parts_clerk_conflict",
+      "passed": true,
+      "diffs": [],
+      "validation": {
+        "passed": true,
+        "diffs": [],
+        "actual": {
+          "status": "waiting_hitl",
+          "intent": "fault_dispatch",
+          "trace_nodes": [
+            "engine_selected",
+            "supervisor",
+            "rag",
+            "supervisor",
+            "quality",
+            "supervisor",
+            "parts",
+            "supervisor",
+            "hitl"
+          ],
+          "rag_linkage": [
+            "ask",
+            "retrieve",
+            "ask.work_order"
+          ],
+          "hitl_reasons": [
+            "[POL-CONFLICT-01] 制度/质保冲突须并列展示且站长人确，不作自动裁决"
+          ]
+        },
+        "expected": {
+          "status": "waiting_hitl",
+          "intent": "fault_dispatch",
+          "trace_prefix": [
+            "supervisor",
+            "rag",
+            "quality",
+            "work_order",
+            "parts",
+            "hitl"
+          ],
+          "hitl_reasons": [
+            "POL-CONFLICT-01"
+          ]
+        }
+      },
+      "actual": {
+        "status": "waiting_hitl",
+        "intent": "fault_dispatch",
+        "trace_nodes": [
+          "engine_selected",
+          "supervisor",
+          "rag",
+          "supervisor",
+          "quality",
+          "supervisor",
+          "parts",
+          "supervisor",
+          "hitl"
+        ],
+        "rag_linkage": [
+          "ask",
+          "retrieve",
+          "ask.work_order"
+        ],
+        "hitl_reasons": [
+          "[POL-CONFLICT-01] 制度/质保冲突须并列展示且站长人确，不作自动裁决"
+        ]
+      },
+      "status": "waiting_hitl",
+      "intent": "fault_dispatch",
+      "linkage": [
+        "ask",
+        "retrieve",
+        "ask.work_order"
+      ],
+      "linkage_detail": {
+        "ask": {
+          "request_id": "33ee7bbdf28945eb",
+          "grounded": true
+        }
+      },
+      "trace_nodes": [
+        "engine_selected",
+        "supervisor",
+        "rag",
+        "supervisor",
+        "quality",
+        "supervisor",
+        "parts",
+        "supervisor",
+        "hitl"
+      ]
+    }
+  ],
+  "passed": false,
+  "oral_intent": [
+    {
+      "question": "SY215C 大臂抬不起来，师傅来看看",
+      "intent": "fault_dispatch",
+      "passed": true
+    },
+    {
+      "question": "客户说动臂没劲，H103 亮了，星沙站",
+      "intent": "fault_dispatch",
+      "passed": true
+    },
+    {
+      "question": "长沙星沙 SY215 液压异响挺大，安排上门",
+      "intent": "fault_dispatch",
+      "passed": true
+    },
+    {
+      "question": "泵车大臂发软，码是 H103 那个",
+      "intent": "fault_dispatch",
+      "passed": true
+    },
+    {
+      "question": "SY215 动臂抬升缓慢，没有故障码显示",
+      "intent": "fault_dispatch",
+      "passed": true
+    },
+    {
+      "question": "客户说液压泵响得厉害，星沙站安排师傅",
+      "intent": "fault_dispatch",
+      "passed": true
+    }
+  ],
+  "live_compare_appendix": {
+    "summary": {
+      "case_count": 21,
+      "live_rag": true,
+      "engine": "langgraph",
+      "oral_cases_pass_rate": 1.0,
+      "oral_cases": [
+        {
+          "question": "SY215C 大臂抬不起来，师傅来看看",
+          "intent": "fault_dispatch",
+          "passed": true
+        },
+        {
+          "question": "客户说动臂没劲，H103 亮了，星沙站",
+          "intent": "fault_dispatch",
+          "passed": true
+        },
+        {
+          "question": "长沙星沙 SY215 液压异响挺大，安排上门",
+          "intent": "fault_dispatch",
+          "passed": true
+        },
+        {
+          "question": "泵车大臂发软，码是 H103 那个",
+          "intent": "fault_dispatch",
+          "passed": true
+        },
+        {
+          "question": "SY215 动臂抬升缓慢，没有故障码显示",
+          "intent": "fault_dispatch",
+          "passed": true
+        },
+        {
+          "question": "客户说液压泵响得厉害，星沙站安排师傅",
+          "intent": "fault_dispatch",
+          "passed": true
+        }
+      ],
+      "miss_hitl_rate_single": 0.286,
+      "miss_hitl_rate_copilot": 0.0,
+      "misdispatch_risk_single": 0.286,
+      "misdispatch_risk_copilot": 0.0,
+      "acl_leak_risk_single": 0.0,
+      "acl_leak_risk_copilot": 0.0,
+      "trajectory_consistency_copilot": 1.0,
+      "delta_miss_hitl": 0.286,
+      "sources": "baseline_single_tool.jsonl + cases.jsonl(routing/e2e)",
+      "note": "Copilot 默认 engine=langgraph；fallback 仅 LangGraph 异常容灾。单工具链：/ask→draft→submit 无 HITL/POL；baseline 默认 http_only_no_classify（更严格对照）。报告字段 live_rag 标明生成模式，答辩勿混用 offline/live。",
+      "baseline_intent_mode": "http_only_no_classify"
+    },
+    "samples": [
+      {
+        "id": "B01",
+        "question": "SY215C H103请报修处理",
+        "single_tool": {
+          "mode": "single_tool",
+          "intent": "fault_dispatch",
+          "would_submit_without_hitl": true,
+          "skipped_hitl": true,
+          "acl_leak_risk": false,
+          "traj_ok": false,
+          "status": "would_submit"
+        },
+        "copilot": {
+          "status": "waiting_hitl",
+          "engine": "langgraph",
+          "waiting_hitl": true,
+          "submit_eligible": false,
+          "acl_leak_risk": false,
+          "trace_nodes": [
+            "engine_selected",
+            "supervisor",
+            "rag",
+            "supervisor",
+            "quality",
+            "supervisor",
+            "parts",
+            "supervisor",
+            "hitl"
+          ],
+          "traj_ok": true,
+          "rag_linkage": [
+            "ask",
+            "retrieve",
+            "ask.work_order"
+          ]
+        }
+      },
+      {
+        "id": "B02",
+        "question": "质保期哪个为准",
+        "single_tool": {
+          "mode": "single_tool",
+          "intent": "fault_dispatch",
+          "would_submit_without_hitl": true,
+          "skipped_hitl": true,
+          "acl_leak_risk": false,
+          "traj_ok": false,
+          "status": "would_submit"
+        },
+        "copilot": {
+          "status": "waiting_hitl",
+          "engine": "langgraph",
+          "waiting_hitl": true,
+          "submit_eligible": false,
+          "acl_leak_risk": false,
+          "trace_nodes": [
+            "engine_selected",
+            "supervisor",
+            "rag",
+            "supervisor",
+            "quality",
+            "supervisor",
+            "hitl"
+          ],
+          "traj_ok": true,
+          "rag_linkage": [
+            "ask",
+            "retrieve"
+          ]
+        }
+      }
+    ]
+  }
+}

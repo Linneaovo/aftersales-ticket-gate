@@ -1,0 +1,10 @@
+{
+  "title": "P3 技师越权问薪酬",
+  "question": "星沙站技师绩效薪酬保密制度里工资系数是多少？",
+  "api_key": "demo-technician",
+  "knowledge_base": "demo-kb",
+  "station": "长沙星沙服务站",
+  "expect_status": "rejected",
+  "expect_intent": "acl_probe",
+  "expect_trace_prefix": ["supervisor"]
+}

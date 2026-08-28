@@ -1,0 +1,50 @@
+{
+  "station": "长沙星沙服务站",
+  "support_depot": "经开备件周转点",
+  "depot_phone": "0731-8888-5600",
+  "default_lead_time_hours": 4,
+  "items": [
+    {
+      "part_no": "HY-SV-215",
+      "name": "主控电磁阀",
+      "stock": 2,
+      "depot": "星沙",
+      "machine_models": ["SY215C", "SY215"],
+      "lead_time_hours": 0
+    },
+    {
+      "part_no": "HY-PUMP-08",
+      "name": "液压泵总成",
+      "stock": 0,
+      "depot": "星沙",
+      "alt_depot": "经开",
+      "machine_models": ["SY215C", "SY215"],
+      "lead_time_hours": 4
+    },
+    {
+      "part_no": "FLT-HY-01",
+      "name": "液压滤芯",
+      "stock": 12,
+      "depot": "星沙",
+      "machine_models": ["SY215C", "SY215", "SR155"],
+      "lead_time_hours": 0
+    },
+    {
+      "part_no": "SEAL-KIT-3",
+      "name": "密封圈",
+      "stock": 20,
+      "depot": "星沙",
+      "machine_models": ["SY215C"],
+      "lead_time_hours": 0
+    },
+    {
+      "part_no": "SEN-P-22",
+      "name": "压力传感器",
+      "stock": 0,
+      "depot": "星沙",
+      "alt_depot": "经开",
+      "machine_models": ["SY215C"],
+      "lead_time_hours": 4
+    }
+  ]
+}

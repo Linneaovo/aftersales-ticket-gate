@@ -1,0 +1,13 @@
+{
+  "title": "P5b 缺料（无 hints 注入·靠 draft 配件）",
+  "business_background": "现场口语报修未显式点配件名；配件需求应由 RAG draft.recommended_parts 驱动预核（非剧本硬编码 hints）。",
+  "question": "星沙站 SY215C H101 液压泵异响，请报修处理",
+  "api_key": "demo-technician",
+  "knowledge_base": "demo-kb",
+  "auto_submit": false,
+  "station": "长沙星沙服务站",
+  "expect_status": "waiting_hitl",
+  "expect_intent": "fault_dispatch",
+  "expect_trace_prefix": ["supervisor", "rag", "quality", "work_order", "parts", "hitl"],
+  "expect_hitl_reasons": ["POL-PARTS-01"]
+}

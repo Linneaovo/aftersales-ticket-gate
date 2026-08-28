@@ -1,0 +1,131 @@
+{
+  "run_id": "53c4410cac1e",
+  "status": "waiting_hitl",
+  "engine": "langgraph",
+  "engine_degraded": false,
+  "scenario": "P1 星沙 H103 — Plan B 预录 trace（RAG 不可达时回放）",
+  "source": "data/traces/53c4410cac1e.jsonl",
+  "events": [
+    {
+      "ts": 1787749191.7060878,
+      "run_id": "53c4410cac1e",
+      "iteration": 1,
+      "agent": "调度员",
+      "node": "supervisor",
+      "submit_eligible_snapshot": false,
+      "ok": true,
+      "intent": "fault_dispatch",
+      "next": "rag",
+      "service_ticket": {
+        "machine_model": "SY215C",
+        "fault_codes": ["H103"],
+        "station": "长沙星沙服务站",
+        "second_visit": false,
+        "sla_class": "normal",
+        "response_hours": 24,
+        "warranty_claim": false,
+        "urgent": false,
+        "raw_excerpt": "SY215C H103请报修处理"
+      }
+    },
+    {
+      "ts": 1787749241.3888805,
+      "run_id": "53c4410cac1e",
+      "iteration": 1,
+      "agent": "知识检索",
+      "node": "rag",
+      "submit_eligible_snapshot": false,
+      "ok": true,
+      "tool": "ask+retrieve",
+      "latency_ms": 49681,
+      "rag_request_id": "42886407998348a6",
+      "citations_count": 3,
+      "blocked": false,
+      "grounded": true,
+      "grounding_score": 1.0,
+      "n_conflicts": 0,
+      "rag_degraded": false
+    },
+    {
+      "ts": 1787749241.390356,
+      "run_id": "53c4410cac1e",
+      "iteration": 2,
+      "agent": "调度员",
+      "node": "supervisor",
+      "submit_eligible_snapshot": false,
+      "ok": true,
+      "intent": "fault_dispatch",
+      "next": "quality"
+    },
+    {
+      "ts": 1787749241.3941078,
+      "run_id": "53c4410cac1e",
+      "iteration": 2,
+      "agent": "质检",
+      "node": "quality",
+      "submit_eligible_snapshot": false,
+      "ok": true,
+      "tool": "rules",
+      "reasons": [],
+      "policy_ids": [],
+      "force_hitl": false,
+      "risk_level": "low"
+    },
+    {
+      "ts": 1787749241.396216,
+      "run_id": "53c4410cac1e",
+      "iteration": 3,
+      "agent": "调度员",
+      "node": "supervisor",
+      "submit_eligible_snapshot": false,
+      "ok": true,
+      "next": "parts"
+    },
+    {
+      "ts": 1787749241.3990602,
+      "run_id": "53c4410cac1e",
+      "iteration": 3,
+      "agent": "配件预核",
+      "node": "parts",
+      "submit_eligible_snapshot": false,
+      "ok": true,
+      "tool": "parts_ledger",
+      "shortage": false,
+      "items": [
+        {
+          "hint": "液压滤芯",
+          "part_no": "FLT-HY-01",
+          "name": "液压滤芯",
+          "stock": 12,
+          "status": "ok",
+          "depot": "星沙",
+          "alt_depot": "经开备件周转点"
+        }
+      ],
+      "note": "长沙星沙服务站库存可覆盖",
+      "hints": ["液压滤芯"]
+    },
+    {
+      "ts": 1787749241.4045167,
+      "run_id": "53c4410cac1e",
+      "iteration": 4,
+      "agent": "调度员",
+      "node": "supervisor",
+      "submit_eligible_snapshot": false,
+      "ok": true,
+      "next": "hitl",
+      "reasons": ["[POL-ROLE-01] 非站长不可直接 submit，须站长人确批准"]
+    },
+    {
+      "ts": 1787749241.4674895,
+      "run_id": "53c4410cac1e",
+      "iteration": 4,
+      "agent": "人确",
+      "node": "hitl",
+      "ok": true,
+      "tool": "interrupt_pending",
+      "waiting": true,
+      "reasons": ["[POL-ROLE-01] 非站长不可直接 submit，须站长人确批准"]
+    }
+  ]
+}

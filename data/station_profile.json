@@ -1,0 +1,19 @@
+{
+  "primary_station": "长沙星沙服务站",
+  "station_aliases": {
+    "primary": ["星沙", "星沙站", "长沙星沙", "长沙星沙服务站", "星沙服务站", "星沙镇"],
+    "support": ["经开", "经开周转", "经开备件", "经开备件周转点", "榔梨", "黄花"]
+  },
+  "support_depot": "经开备件周转点",
+  "region": "长株潭",
+  "urgent_response_hours": 4,
+  "normal_response_hours": 24,
+  "rainy_season_note": "雨季户外作业需备注防滑、液压接头防水与电路防护",
+  "demo_corpus_hints": [
+    "故障码对照表",
+    "质保制度",
+    "长沙星沙服务站现场服务规范",
+    "配件员仓储备货指引",
+    "保养规范"
+  ]
+}

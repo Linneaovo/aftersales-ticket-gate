@@ -1,0 +1,20 @@
+{
+  "description": "演示 API Key → 角色映射；生产接 SSO/ERP 账号后写入 role 映射表",
+  "key_role_map": {
+    "demo-key": "technician",
+    "demo-general": "technician",
+    "demo-technician": "technician",
+    "demo-parts": "parts_clerk",
+    "demo-chief": "station_chief",
+    "demo-finance": "finance",
+    "demo-hr": "finance"
+  },
+  "chief_keys": ["demo-chief"],
+  "role_default_keys": {
+    "technician": "demo-technician",
+    "parts_clerk": "demo-parts",
+    "station_chief": "demo-chief",
+    "finance": "demo-finance",
+    "general": "demo-key"
+  }
+}

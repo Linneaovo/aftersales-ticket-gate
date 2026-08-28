@@ -1,0 +1,9 @@
+{
+  "title": "P6 闲聊拒答",
+  "question": "你好，今天天气怎么样？",
+  "api_key": "demo-key",
+  "knowledge_base": "demo-kb",
+  "expect_status": "rejected",
+  "expect_intent": "chitchat",
+  "expect_trace_prefix": ["supervisor"]
+}

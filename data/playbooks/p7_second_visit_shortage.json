@@ -1,0 +1,14 @@
+{
+  "title": "P7 二次进站 + 缺料组合",
+  "question": "星沙站 SY215C H103 二次进站仍液压无力，请紧急报修处理",
+  "api_key": "demo-technician",
+  "knowledge_base": "demo-kb",
+  "station": "长沙星沙服务站",
+  "second_visit": true,
+  "sla_class": "urgent",
+  "parts_hints": ["液压泵总成"],
+  "expect_status": "waiting_hitl",
+  "expect_intent": "fault_dispatch",
+  "expect_trace_prefix": ["supervisor", "rag", "quality", "work_order", "parts", "hitl"],
+  "expect_hitl_reasons": ["POL-SLA-01", "POL-SLA-02", "POL-PARTS-01"]
+}

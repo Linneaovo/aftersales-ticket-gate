@@ -1,0 +1,11 @@
+{
+  "title": "P4 纯手册查询 · 不开单",
+  "question": "故障码 H103 是什么意思？",
+  "api_key": "demo-technician",
+  "knowledge_base": "demo-kb",
+  "station": "长沙星沙服务站",
+  "expect_status": "succeeded",
+  "expect_intent": "knowledge_only",
+  "expect_no_work_order_draft": true,
+  "expect_trace_prefix": ["supervisor", "rag", "quality"]
+}

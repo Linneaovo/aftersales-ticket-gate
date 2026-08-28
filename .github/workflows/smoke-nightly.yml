@@ -1,0 +1,38 @@
+name: Smoke (manual / nightly)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 18 * * *"
+
+jobs:
+  live-smoke:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Offline pytest (baseline)
+        run: python -m pytest -q -m "not integration"
+
+      - name: Live RAG smoke (requires RAG secrets / self-hosted runner)
+        run: |
+          echo "Skip live smoke on GitHub-hosted runner unless RAG endpoint configured"
+          python scripts/smoke_with_rag.py --engine langgraph --compare-live || true
+
+      - name: Upload smoke report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-report
+          path: data/eval/smoke_report.json
+          if-no-files-found: ignore

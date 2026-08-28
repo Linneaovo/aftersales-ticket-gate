@@ -1,0 +1,11 @@
+{
+  "title": "P2 质保制度冲突 · 并列不裁决",
+  "question": "星沙站 SY215C 液压泵质保期新旧制度不一致，到底哪个为准？",
+  "api_key": "demo-technician",
+  "knowledge_base": "demo-kb",
+  "station": "长沙星沙服务站",
+  "expect_status": "waiting_hitl",
+  "expect_intent": "conflict_review",
+  "expect_trace_prefix": ["supervisor", "rag", "quality", "hitl"],
+  "expect_hitl_reasons": ["POL-CONFLICT-01"]
+}
