@@ -1,0 +1,30 @@
+{
+  "mode": "live",
+  "passed": [
+    "live.rag.ok",
+    "live.rag_mock_inbox",
+    "live.rag_linkage=['ask', 'retrieve', 'ask.work_order']",
+    "playbooks.core.p1_xingsha_h103",
+    "playbooks.core.p1b_no_shortage_ready",
+    "playbooks.core.p8_parts_clerk_conflict",
+    "P1 → waiting_hitl",
+    "P1 配件缺料",
+    "站长待办列表",
+    "打开单据",
+    "HITL 拒绝",
+    "HITL 退回",
+    "HITL 批准",
+    "work_order_submit",
+    "decision_certificate",
+    "GET /inbox 有记录",
+    "取消单据",
+    "P1b 有库存对照",
+    "P8 制度冲突",
+    "手动提交报修",
+    "参考回答 rag 字段",
+    "开单草稿",
+    "离线对照实验"
+  ],
+  "failed": [],
+  "skipped": []
+}

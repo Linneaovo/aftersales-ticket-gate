@@ -53,6 +53,7 @@ def create_initial_state(
     station: str | None = None,
     second_visit: bool | None = None,
     sla_class: str | None = None,
+    parent_run_id: str | None = None,
 ) -> CopilotState:
     settings = get_settings()
     key = api_key or settings.api_key
@@ -76,13 +77,30 @@ def create_initial_state(
         station_override=station or "",
         second_visit_override=second_visit,
         sla_class_override=sla_class or "",
+        parent_run_id=str(parent_run_id or ""),
     )
+
+
+def _maybe_clear_terminal_checkpoint(state: CopilotState) -> None:
+    """终态清理 LangGraph checkpoint，避免 orphan 与 persistence_ok=false。"""
+    if state.get("status") not in TERMINAL:
+        return
+    run_id = str(state.get("run_id") or "").strip()
+    if not run_id:
+        return
+    from app.graph.builder import clear_checkpoint_thread
+
+    try:
+        clear_checkpoint_thread(run_id)
+    except Exception:
+        pass
 
 
 def _persist(state: CopilotState, persist: bool) -> None:
     if persist:
         append_trace_file(state)
         save_run_snapshot(state)
+    _maybe_clear_terminal_checkpoint(state)
 
 
 def step_fallback(state: CopilotState, client: Any = None) -> CopilotState:
@@ -99,10 +117,16 @@ def step_fallback(state: CopilotState, client: Any = None) -> CopilotState:
         if action == "end" or state.get("status") in TERMINAL:
             return state
         if state.get("status") == "waiting_hitl" and action == "hitl":
-            # fallback：进入 hitl 节点写 waiting（engine 非 langgraph 时不 interrupt）
-            state = merge_state(state, engine="fallback")
-            state = NODE_FUNCS["hitl"](state)
-            return state
+            # fallback 不支持 LangGraph interrupt/resume，禁止假 waiting_hitl
+            return merge_state(
+                state,
+                engine="fallback",
+                engine_degraded=True,
+                status="failed",
+                error="fallback 引擎不支持 HITL interrupt/resume；请使用 langgraph 重跑",
+                final_summary="fallback 引擎不支持 HITL；无 checkpoint 不可 resume",
+                next_action="end",
+            )
 
     if action == "end":
         return state
@@ -121,7 +145,18 @@ def step_fallback(state: CopilotState, client: Any = None) -> CopilotState:
     else:
         state = fn(state)
 
-    if state.get("status") in TERMINAL or state.get("status") == "waiting_hitl":
+    # fallback 任意节点进入 waiting_hitl 都禁止（含直接 next_action=hitl）
+    if state.get("status") == "waiting_hitl":
+        return merge_state(
+            state,
+            engine="fallback",
+            engine_degraded=True,
+            status="failed",
+            error="fallback 引擎不支持 HITL interrupt/resume；请使用 langgraph 重跑",
+            final_summary="fallback 引擎不支持 HITL；无 checkpoint 不可 resume",
+            next_action="end",
+        )
+    if state.get("status") in TERMINAL:
         return state
     return merge_state(state, next_action="supervisor")
 
@@ -152,6 +187,14 @@ def run_fallback(
                 break
     finally:
         reset_rag_client(token)
+    if state.get("status") == "waiting_hitl" and not (state.get("hitl") or {}).get("resolved"):
+        state = merge_state(
+            state,
+            status="failed",
+            error="fallback 引擎不支持 HITL interrupt/resume；请使用 langgraph 重跑",
+            final_summary="fallback 引擎 HITL 不可恢复",
+            next_action="end",
+        )
     state = _finalize_run_state(state)
     _persist(state, persist)
     return state
@@ -186,6 +229,22 @@ def _append_engine_selected_trace(state: CopilotState) -> CopilotState:
         return state
     import time
 
+    from app.config import get_settings
+    from app.tools.rag_factory import is_rag_reachable
+
+    settings = get_settings()
+    if settings.demo_offline:
+        rag_mode = "demo_offline"
+        kport = "fixture"
+    elif is_rag_reachable():
+        rag_mode = "live"
+        kport = "http"
+    elif settings.rag_auto_fallback:
+        rag_mode = "demo_offline"
+        kport = "fixture"
+    else:
+        rag_mode = "unreachable"
+        kport = "none"
     events.insert(
         0,
         {
@@ -197,6 +256,8 @@ def _append_engine_selected_trace(state: CopilotState) -> CopilotState:
             "ok": True,
             "engine": state.get("engine") or "langgraph",
             "execution_path": _derive_execution_path(state),
+            "rag_client_mode": rag_mode,
+            "knowledge_port": kport,
         },
     )
     return merge_state(state, trace_events=events)
@@ -337,12 +398,37 @@ def apply_hitl(
     client: RagClient | None = None,
     persist: bool = True,
     approver_api_key: str | None = None,
+    confirmations: dict[str, bool] | None = None,
 ) -> CopilotState:
-    """人确续跑。批准/拒绝均须站长 Key（由 API 层先行校验）。"""
-    resume_payload = {"decision": decision, "note": note}
+    """人确续跑。批准/拒绝/退回补件均须站长 Key（领域层强制，不只依赖 API）。"""
+    from app.policy.gates import is_station_chief
+    from app.policy.hitl_layers import normalize_confirmations
+
+    if not is_station_chief(api_key=approver_api_key):
+        raise PermissionError(
+            "人确须站长角色（领域层 POL-ROLE-01）。请传站长 API Key；"
+            "生产应接 SSO→role 映射，禁止仅靠网关口头约定。"
+        )
+
+    # edit → return：退回补件终止，不改草稿
+    if decision == "edit":
+        decision = "return"
+
+    conf = normalize_confirmations(confirmations)
+    resume_payload: dict[str, Any] = {"decision": decision, "note": note, "confirmations": conf}
     run_id = str(state.get("run_id") or "")
     use_langgraph = (state.get("engine") or "langgraph") == "langgraph"
     if use_langgraph and not checkpoint_exists(run_id):
+        settings = get_settings()
+        # O5：STRICT 下禁止无 checkpoint 默默 fallback 扮 interrupt 续跑
+        if settings.engine_strict:
+            failed = _fail_langgraph_strict(
+                state,
+                "checkpoint_missing: HITL resume 无 LangGraph checkpoint（ENGINE_STRICT=1）；"
+                "请重新跑剧本或 ENGINE_STRICT=0 显式允许 fallback",
+            )
+            _persist(failed, persist)
+            return failed
         state = _mark_engine_degraded(
             state,
             "HITL checkpoint 丢失，已切换 fallback 续跑（无 interrupt/resume）",
@@ -353,7 +439,15 @@ def apply_hitl(
         try:
             # 先写入 hitl，再 Command(resume)
             hitl = dict(state.get("hitl") or {})
-            hitl.update({"decision": decision, "note": note, "resolved": True, "required": True})
+            hitl.update(
+                {
+                    "decision": decision,
+                    "note": note,
+                    "resolved": True,
+                    "required": True,
+                    "confirmations": conf,
+                }
+            )
             if approver_api_key:
                 # 仅记录，不改业务角色（业务角色仍是提单人）
                 hitl["approver_key_role"] = role_from_api_key(approver_api_key)
@@ -366,7 +460,15 @@ def apply_hitl(
             state = _mark_engine_degraded(state, f"HITL langgraph resume 失败: {exc}")  # type: ignore[arg-type]
 
     hitl = dict(state.get("hitl") or {})
-    hitl.update({"decision": decision, "note": note, "resolved": True, "required": True})
+    hitl.update(
+        {
+            "decision": decision,
+            "note": note,
+            "resolved": True,
+            "required": True,
+            "confirmations": conf,
+        }
+    )
     if approver_api_key:
         hitl["approver_key_role"] = role_from_api_key(approver_api_key)
     state = merge_state(
@@ -376,6 +478,9 @@ def apply_hitl(
         next_action="supervisor",
         engine="fallback",
     )
+    from app.policy.decision_certificate import build_decision_certificate
+
+    state = merge_state(state, decision_certificate=build_decision_certificate(state, phase="resolved"))
     return run_fallback(state, client=client, persist=persist)  # type: ignore[arg-type]
 
 
@@ -411,6 +516,8 @@ def public_view(state: CopilotState, *, view: str = "default") -> dict[str, Any]
             "alt_depot": parts.get("alt_depot"),
             "suggested_action": parts.get("suggested_action"),
             "note": parts.get("note"),
+            "hints_source": parts.get("hints_source"),
+            "master_data_authority": parts.get("master_data_authority"),
         }
     rag_mode = "demo_offline" if state.get("rag_offline_mode") else "live"
     submit = state.get("work_order_submit")
@@ -432,6 +539,9 @@ def public_view(state: CopilotState, *, view: str = "default") -> dict[str, Any]
         "status": state.get("status"),
         "role": role,
         "intent": state.get("intent"),
+        "intent_label": "报修开单" if state.get("intent") == "fault_dispatch" else state.get("intent"),
+        "intent_confidence": state.get("intent_confidence"),
+        "intent_signals": state.get("intent_signals") or [],
         "iteration": state.get("iteration"),
         "engine": state.get("engine"),
         "engine_degraded": bool(state.get("engine_degraded")),
@@ -440,7 +550,10 @@ def public_view(state: CopilotState, *, view: str = "default") -> dict[str, Any]
         "work_order_state": state.get("work_order_state") or _derive_work_order_state(state),
         "rag_offline_mode": bool(state.get("rag_offline_mode")),
         "rag_client_mode": rag_mode,
+        "knowledge_port": "fixture" if rag_mode == "demo_offline" or state.get("rag_offline_mode") else "http",
         "final_summary": state.get("final_summary"),
+        "scope_note": "报修开单门禁；提交为 file_outbox 或 rag_mock_inbox；非 ERP 派工/非生产开单系统",
+        "not_erp_dispatch": True,
         "error": state.get("error"),
         "submit_eligible": state.get("submit_eligible"),
         "service_ticket": state.get("service_ticket"),
@@ -454,11 +567,29 @@ def public_view(state: CopilotState, *, view: str = "default") -> dict[str, Any]
         "conflict_bundle": conflict,
         "critic_report": state.get("critic_report"),
         "parts_check": parts,
+        "decision_certificate": state.get("decision_certificate"),
+        "parent_run_id": state.get("parent_run_id") or None,
+        "return_for_rework": bool(state.get("return_for_rework")),
+        "return_note": (
+            str((state.get("hitl") or {}).get("note") or "")
+            if state.get("return_for_rework")
+            or (state.get("hitl") or {}).get("decision") in {"return", "edit"}
+            else None
+        ),
+        "reopen_hint": (
+            "使用 parent_run_id 调用 POST /runs 基于退回说明重新开跑（不改原 draft）"
+            if state.get("return_for_rework")
+            or (state.get("hitl") or {}).get("decision") in {"return", "edit"}
+            else None
+        ),
         "hitl": state.get("hitl") if not strict_public else {
             "required": (state.get("hitl") or {}).get("required"),
             "resolved": (state.get("hitl") or {}).get("resolved"),
             "decision": (state.get("hitl") or {}).get("decision"),
             "reasons": (state.get("hitl") or {}).get("reasons"),
+            "prompt": (state.get("hitl") or {}).get("prompt"),
+            "pending_layers": (state.get("hitl") or {}).get("pending_layers") or [],
+            "confirmations": (state.get("hitl") or {}).get("confirmations") or {},
         },
         "work_order_draft": draft,
         "work_order_submit": submit,

@@ -1,6 +1,7 @@
 # enterprise-rag 最小响应契约（Copilot 侧约定）
 
-> **Live 联调完整版**见 [RAG_COPILOT_CONTRACT.md](RAG_COPILOT_CONTRACT.md)（含 P2/P4 分叉说明）。
+> **SSOT**：可执行校验见 `app/tools/rag_contract.py`；完整联调说明见 [RAG_COPILOT_CONTRACT.md](RAG_COPILOT_CONTRACT.md)。  
+> 本文仅保留最小字段速查，勿与契约版本号分叉。
 
 Copilot 通过 `app/tools/rag_normalize.py` 对齐 RAG 响应；**normalize 只处理已知字段差异**，未知字段忽略。
 
@@ -55,4 +56,4 @@ Copilot 通过 `app/tools/rag_normalize.py` 对齐 RAG 响应；**normalize 只�
 
 - RAG 新增字段：Copilot 透传或忽略，不破坏现有流程
 - RAG 重命名字段：在 `rag_normalize.py` 增加 alias 映射并补测试
-- 答辩前双方确认 `demo-kb` 语料与上述字段可用
+- 演示前双方确认 `demo-kb` 语料与上述字段可用

@@ -1,0 +1,45 @@
+{
+  "schema": "parts_gate_ab/v1",
+  "generated_at": "2026-09-01T08:40:00.243515+00:00",
+  "question": "长沙星沙服务站：SY215C 报故障码 H103，客户反映动臂液压无力，请安排报修开单",
+  "engine": "langgraph",
+  "rag_mode": "fakerag_stub",
+  "ledger": "data/parts_ledger.json",
+  "cases": {
+    "A_shortage_pump": {
+      "part": "液压泵总成",
+      "stock_expected": 0,
+      "result": {
+        "status": "waiting_hitl",
+        "intent": "fault_dispatch",
+        "shortage": true,
+        "hints_source": "rag_draft",
+        "has_pol_parts_01": true,
+        "hitl_reasons": [
+          "[POL-PARTS-01] 配件缺料须人确调拨或改约: 建议：经开备件周转点调拨 · 预计 4h · DEMO电话 000-DEMO-5600（虚构演示热线，非任何真实服务站号码）"
+        ],
+        "suggested_action": "建议：经开备件周转点调拨 · 预计 4h · DEMO电话 000-DEMO-5600（虚构演示热线，非任何真实服务站号码）"
+      },
+      "expect": "waiting_hitl + POL-PARTS-01",
+      "passed": true
+    },
+    "B_in_stock_filter": {
+      "part": "液压滤芯",
+      "stock_expected": ">0",
+      "hints_mode": "force_hints",
+      "result": {
+        "status": "succeeded",
+        "intent": "fault_dispatch",
+        "shortage": false,
+        "hints_source": "force_hints",
+        "has_pol_parts_01": false,
+        "hitl_reasons": [],
+        "suggested_action": "长沙星沙服务站库存可覆盖"
+      },
+      "expect": "no POL-PARTS-01 (shortage=false)",
+      "passed": true
+    }
+  },
+  "all_ok": true,
+  "narrative": "同报修话术；改预核配件/库存则缺料门禁翻转——非写死必进 HITL"
+}

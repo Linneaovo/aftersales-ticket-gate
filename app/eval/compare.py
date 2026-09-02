@@ -9,25 +9,27 @@ from app.graph.nodes import classify_intent
 from app.graph.runner import create_initial_state, run_until_pause
 from app.policy.gates import evaluate_submit_eligible
 
+# 演示口语：报修开单话术（不做派工调度）。现场「派人/上门」仍可由 intent_rules 识别，但不进本列表。
 ORAL_SMOKE_QUESTIONS = [
-    "SY215C 大臂抬不起来，师傅来看看",
+    "SY215C 大臂抬不起来，星沙站帮忙报修开单",
     "客户说动臂没劲，H103 亮了，星沙站",
-    "长沙星沙 SY215 液压异响挺大，安排上门",
+    "长沙星沙 SY215 液压异响挺大，先开单报修",
     "泵车大臂发软，码是 H103 那个",
     "SY215 动臂抬升缓慢，没有故障码显示",
-    "客户说液压泵响得厉害，星沙站安排师傅",
-    "星沙这边泵车转台卡死了，麻烦派师傅过来瞅瞅",
-    "榔梨工地 SY215C 动作慢，你们安排师傅上门看看",
+    "客户说液压泵响得厉害，星沙站帮忙开单",
+    "星沙这边泵车转台卡死了，麻烦报修处理瞅瞅",
+    "榔梨工地 SY215C 动作慢，你们帮忙开单报修",
     "动臂抬不高，客户催得紧，星沙站赶紧报修处理",
     "这台挖机液压无力，没亮码，星沙服务站接一下",
     "SY215 油缸漏油，星沙站先开单安排排查",
-    "转台回转有问题，星沙这边师傅过来看一下",
-    "大臂沉降明显，215 客户要上门，星沙站报修",
+    "转台回转有问题，星沙这边请站长确认开单",
+    "大臂沉降明显，215 客户要报修，星沙站开单",
     "泵车发软厉害，经开那边有没有件，先报个修",
-    "客户讲动臂卡顿，星沙站安排人过来排查一下",
-    "液压泵响得凶，SY215C，星沙安排师傅上门",
+    "客户讲动臂卡顿，星沙站帮忙开单排查一下",
+    "液压泵响得凶，SY215C，星沙站报修开单",
     "星沙站 215 没劲，帮忙开单报修处理",
-    "动臂没力，客户在榔梨等，星沙站派人上门",
+    "动臂没力，客户在榔梨等，星沙站报修开单",
+    "星沙那边车子抬臂慢，客户催得紧",
 ]
 
 
@@ -124,14 +126,23 @@ def simulate_single_tool(question: str, *, live_rag: bool = False, use_local_int
     }
 
 
+def would_submit_without_hitl(out: dict[str, Any]) -> bool:
+    """误开单标志：已 submit 且未经站长 approve——由运行结果推导，禁止写死。"""
+    hitl = out.get("hitl") or {}
+    return bool(out.get("work_order_submit")) and not (
+        bool(hitl.get("resolved")) and hitl.get("decision") == "approve"
+    )
+
+
 def simulate_copilot(
     question: str,
     *,
     api_key: str = "demo-technician",
     live_rag: bool = False,
     engine: str = "langgraph",
+    auto_submit: bool = False,
 ) -> dict[str, Any]:
-    state = create_initial_state(question, api_key=api_key, engine=engine, auto_submit=False)
+    state = create_initial_state(question, api_key=api_key, engine=engine, auto_submit=auto_submit)
     if live_rag:
         from app.tools.rag_client import RagClient
 
@@ -143,12 +154,13 @@ def simulate_copilot(
     nodes = [e.get("node") for e in (out.get("trace_events") or [])]
     expect_prefix = ["supervisor", "rag", "quality"]
     traj_ok = all(n in nodes for n in expect_prefix) or out.get("status") == "rejected"
+    would_submit = would_submit_without_hitl(out)
     return {
         "mode": "copilot",
         "intent": out.get("intent"),
         "status": out.get("status"),
         "waiting_hitl": out.get("status") == "waiting_hitl",
-        "would_submit_without_hitl": False,
+        "would_submit_without_hitl": would_submit,
         "submit_eligible": eligible,
         "blockers": blockers,
         "skipped_hitl": out.get("status") not in {"waiting_hitl", "rejected"}
@@ -218,7 +230,7 @@ def compare_cases(
 
     comparisons = []
     miss_hitl_single = miss_hitl_copilot = 0
-    mis_dispatch_single = 0
+    mis_dispatch_single = mis_dispatch_copilot = 0
     acl_single = acl_copilot = 0
     traj_ok_n = 0
 
@@ -236,6 +248,8 @@ def compare_cases(
             miss_hitl_copilot += 1
         if single["would_submit_without_hitl"]:
             mis_dispatch_single += 1
+        if copilot.get("would_submit_without_hitl"):
+            mis_dispatch_copilot += 1
         if single["acl_leak_risk"]:
             acl_single += 1
         if copilot["acl_leak_risk"]:
@@ -251,6 +265,7 @@ def compare_cases(
                     "status": copilot.get("status"),
                     "engine": engine,
                     "waiting_hitl": copilot.get("waiting_hitl"),
+                    "would_submit_without_hitl": copilot.get("would_submit_without_hitl"),
                     "submit_eligible": copilot.get("submit_eligible"),
                     "acl_leak_risk": copilot.get("acl_leak_risk"),
                     "trace_nodes": copilot.get("trace_nodes"),
@@ -271,15 +286,19 @@ def compare_cases(
         "miss_hitl_rate_single": round(miss_hitl_single / n, 3),
         "miss_hitl_rate_copilot": round(miss_hitl_copilot / n, 3),
         "misdispatch_risk_single": round(mis_dispatch_single / n, 3),
-        "misdispatch_risk_copilot": 0.0,
+        "misdispatch_risk_copilot": round(mis_dispatch_copilot / n, 3),
         "acl_leak_risk_single": round(acl_single / n, 3),
         "acl_leak_risk_copilot": round(acl_copilot / n, 3),
         "trajectory_consistency_copilot": round(traj_ok_n / n, 3),
         "delta_miss_hitl": round((miss_hitl_single - miss_hitl_copilot) / n, 3),
+        "delta_false_submit": round((mis_dispatch_single - mis_dispatch_copilot) / n, 3),
         "sources": "baseline_single_tool.jsonl + cases.jsonl(routing/e2e)",
         "note": (
             "Copilot 默认 engine=langgraph；fallback 仅 LangGraph 异常容灾。"
             "单工具链：/ask→draft→submit 无 HITL/POL；"
+            "misdispatch_risk_* 由 would_submit_without_hitl 计数，禁止写死。"
+            "门禁下未经 approve 不会 submit → copilot 风险常为 0（统计结果）；"
+            "负例：已 submit 未经 approve 时标志为 True。"
             + (
                 "baseline 默认 http_only_no_classify（更严格对照）。"
                 if baseline_http_only

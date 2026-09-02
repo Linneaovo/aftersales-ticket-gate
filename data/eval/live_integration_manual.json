@@ -1,6 +1,13 @@
 {
-  "passed": 9,
-  "total": 10,
-  "all_ok": false,
-  "oral_question": "动臂没力，客户在榔梨等，星沙站派人上门"
+  "script_version": "2026-08-28.p0",
+  "checklist_hash": "28cc2ef867c3",
+  "expected_total": 11,
+  "passed": 11,
+  "total": 11,
+  "all_ok": true,
+  "oral_question": "星沙那边车子抬臂慢，客户催得紧",
+  "mock_submit": {
+    "destination": "rag_mock_inbox",
+    "is_production_ticket": false
+  }
 }

@@ -6,8 +6,11 @@ import time
 from typing import Any
 
 from app.config import get_settings
+from app.logging_config import get_logger
 from app.tools.demo_rag import DemoRagClient
 from app.tools.rag_client import RagClient, RagToolError
+
+logger = get_logger("rag_factory")
 
 _rag_reachable_cache: bool | None = None
 _rag_reachable_checked_at: float = 0.0
@@ -31,7 +34,11 @@ def is_rag_reachable(*, force_check: bool = False) -> bool:
     try:
         RagClient(settings=settings).health()
         _rag_reachable_cache = True
-    except (RagToolError, Exception):
+    except RagToolError as exc:
+        logger.warning("enterprise-rag 不可达: %s", exc)
+        _rag_reachable_cache = False
+    except Exception:
+        logger.exception("enterprise-rag 健康检查出现未预期异常")
         _rag_reachable_cache = False
     _rag_reachable_checked_at = now
     return _rag_reachable_cache
@@ -62,6 +69,25 @@ def build_rag_client(api_key: str | None = None, *, parts: list[str] | None = No
 
 
 def rag_client_mode(client: Any) -> str:
+    """历史字段：fixture 客户端仍报 demo_offline，避免冲垮既有断言。"""
     if getattr(client, "offline", False):
         return "demo_offline"
     return "live"
+
+
+def knowledge_port_of(client: Any) -> str:
+    """知识源端口：fixture（本仓契约响应）| http（enterprise-rag）。"""
+    if getattr(client, "offline", False):
+        return "fixture"
+    return "http"
+
+
+def assert_knowledge_port(client: Any) -> bool:
+    """结构性检查：客户端是否具备 KnowledgePort 关键表面。"""
+    from app.tools.knowledge_port import KnowledgePort
+
+    return isinstance(client, KnowledgePort) or (
+        callable(getattr(client, "ask", None))
+        and callable(getattr(client, "draft_work_order", None))
+        and hasattr(client, "offline")
+    )

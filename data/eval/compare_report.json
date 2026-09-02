@@ -6,7 +6,7 @@
     "oral_cases_pass_rate": 1.0,
     "oral_cases": [
       {
-        "question": "SY215C 大臂抬不起来，师傅来看看",
+        "question": "SY215C 大臂抬不起来，星沙站帮忙报修开单",
         "intent": "fault_dispatch",
         "passed": true
       },
@@ -16,7 +16,7 @@
         "passed": true
       },
       {
-        "question": "长沙星沙 SY215 液压异响挺大，安排上门",
+        "question": "长沙星沙 SY215 液压异响挺大，先开单报修",
         "intent": "fault_dispatch",
         "passed": true
       },
@@ -31,17 +31,17 @@
         "passed": true
       },
       {
-        "question": "客户说液压泵响得厉害，星沙站安排师傅",
+        "question": "客户说液压泵响得厉害，星沙站帮忙开单",
         "intent": "fault_dispatch",
         "passed": true
       },
       {
-        "question": "星沙这边泵车转台卡死了，麻烦派师傅过来瞅瞅",
+        "question": "星沙这边泵车转台卡死了，麻烦报修处理瞅瞅",
         "intent": "fault_dispatch",
         "passed": true
       },
       {
-        "question": "榔梨工地 SY215C 动作慢，你们安排师傅上门看看",
+        "question": "榔梨工地 SY215C 动作慢，你们帮忙开单报修",
         "intent": "fault_dispatch",
         "passed": true
       },
@@ -61,12 +61,12 @@
         "passed": true
       },
       {
-        "question": "转台回转有问题，星沙这边师傅过来看一下",
+        "question": "转台回转有问题，星沙这边请站长确认开单",
         "intent": "fault_dispatch",
         "passed": true
       },
       {
-        "question": "大臂沉降明显，215 客户要上门，星沙站报修",
+        "question": "大臂沉降明显，215 客户要报修，星沙站开单",
         "intent": "fault_dispatch",
         "passed": true
       },
@@ -76,12 +76,12 @@
         "passed": true
       },
       {
-        "question": "客户讲动臂卡顿，星沙站安排人过来排查一下",
+        "question": "客户讲动臂卡顿，星沙站帮忙开单排查一下",
         "intent": "fault_dispatch",
         "passed": true
       },
       {
-        "question": "液压泵响得凶，SY215C，星沙安排师傅上门",
+        "question": "液压泵响得凶，SY215C，星沙站报修开单",
         "intent": "fault_dispatch",
         "passed": true
       },
@@ -91,7 +91,12 @@
         "passed": true
       },
       {
-        "question": "动臂没力，客户在榔梨等，星沙站派人上门",
+        "question": "动臂没力，客户在榔梨等，星沙站报修开单",
+        "intent": "fault_dispatch",
+        "passed": true
+      },
+      {
+        "question": "星沙那边车子抬臂慢，客户催得紧",
         "intent": "fault_dispatch",
         "passed": true
       }
@@ -104,8 +109,9 @@
     "acl_leak_risk_copilot": 0.0,
     "trajectory_consistency_copilot": 1.0,
     "delta_miss_hitl": 1.0,
+    "delta_false_submit": 1.0,
     "sources": "baseline_single_tool.jsonl + cases.jsonl(routing/e2e)",
-    "note": "Copilot 默认 engine=langgraph；fallback 仅 LangGraph 异常容灾。单工具链：/ask→draft→submit 无 HITL/POL；baseline 默认 http_only_no_classify（更严格对照）。报告字段 live_rag 标明生成模式，答辩勿混用 offline/live。",
+    "note": "Copilot 默认 engine=langgraph；fallback 仅 LangGraph 异常容灾。单工具链：/ask→draft→submit 无 HITL/POL；misdispatch_risk_* 由 would_submit_without_hitl 计数，禁止写死。门禁下未经 approve 不会 submit → copilot 风险常为 0（统计结果）；负例：已 submit 未经 approve 时标志为 True。baseline 默认 http_only_no_classify（更严格对照）。报告字段 live_rag 标明生成模式，答辩勿混用 offline/live。",
     "baseline_intent_mode": "http_only_no_classify"
   },
   "comparisons": [
@@ -125,6 +131,7 @@
         "status": "waiting_hitl",
         "engine": "langgraph",
         "waiting_hitl": true,
+        "would_submit_without_hitl": false,
         "submit_eligible": false,
         "acl_leak_risk": false,
         "trace_nodes": [
@@ -165,6 +172,7 @@
         "status": "waiting_hitl",
         "engine": "langgraph",
         "waiting_hitl": true,
+        "would_submit_without_hitl": false,
         "submit_eligible": false,
         "acl_leak_risk": false,
         "trace_nodes": [
@@ -199,6 +207,7 @@
         "status": "rejected",
         "engine": "langgraph",
         "waiting_hitl": false,
+        "would_submit_without_hitl": false,
         "submit_eligible": false,
         "acl_leak_risk": false,
         "trace_nodes": [
@@ -225,6 +234,7 @@
         "status": "rejected",
         "engine": "langgraph",
         "waiting_hitl": false,
+        "would_submit_without_hitl": false,
         "submit_eligible": false,
         "acl_leak_risk": false,
         "trace_nodes": [
@@ -251,6 +261,7 @@
         "status": "rejected",
         "engine": "langgraph",
         "waiting_hitl": false,
+        "would_submit_without_hitl": false,
         "submit_eligible": false,
         "acl_leak_risk": false,
         "trace_nodes": [
@@ -277,6 +288,7 @@
         "status": "succeeded",
         "engine": "langgraph",
         "waiting_hitl": false,
+        "would_submit_without_hitl": false,
         "submit_eligible": false,
         "acl_leak_risk": false,
         "trace_nodes": [
@@ -310,6 +322,7 @@
         "status": "waiting_hitl",
         "engine": "langgraph",
         "waiting_hitl": true,
+        "would_submit_without_hitl": false,
         "submit_eligible": false,
         "acl_leak_risk": false,
         "trace_nodes": [
@@ -344,6 +357,7 @@
         "status": "rejected",
         "engine": "langgraph",
         "waiting_hitl": false,
+        "would_submit_without_hitl": false,
         "submit_eligible": false,
         "acl_leak_risk": false,
         "trace_nodes": [
@@ -370,6 +384,7 @@
         "status": "waiting_hitl",
         "engine": "langgraph",
         "waiting_hitl": true,
+        "would_submit_without_hitl": false,
         "submit_eligible": false,
         "acl_leak_risk": false,
         "trace_nodes": [
@@ -410,6 +425,7 @@
         "status": "succeeded",
         "engine": "langgraph",
         "waiting_hitl": false,
+        "would_submit_without_hitl": false,
         "submit_eligible": false,
         "acl_leak_risk": false,
         "trace_nodes": [
@@ -443,6 +459,7 @@
         "status": "waiting_hitl",
         "engine": "langgraph",
         "waiting_hitl": true,
+        "would_submit_without_hitl": false,
         "submit_eligible": false,
         "acl_leak_risk": false,
         "trace_nodes": [
@@ -483,6 +500,7 @@
         "status": "waiting_hitl",
         "engine": "langgraph",
         "waiting_hitl": true,
+        "would_submit_without_hitl": false,
         "submit_eligible": false,
         "acl_leak_risk": false,
         "trace_nodes": [
@@ -517,6 +535,7 @@
         "status": "rejected",
         "engine": "langgraph",
         "waiting_hitl": false,
+        "would_submit_without_hitl": false,
         "submit_eligible": false,
         "acl_leak_risk": false,
         "trace_nodes": [
@@ -543,6 +562,7 @@
         "status": "succeeded",
         "engine": "langgraph",
         "waiting_hitl": false,
+        "would_submit_without_hitl": false,
         "submit_eligible": false,
         "acl_leak_risk": false,
         "trace_nodes": [
@@ -576,6 +596,7 @@
         "status": "waiting_hitl",
         "engine": "langgraph",
         "waiting_hitl": true,
+        "would_submit_without_hitl": false,
         "submit_eligible": false,
         "acl_leak_risk": false,
         "trace_nodes": [
@@ -616,6 +637,7 @@
         "status": "waiting_hitl",
         "engine": "langgraph",
         "waiting_hitl": true,
+        "would_submit_without_hitl": false,
         "submit_eligible": false,
         "acl_leak_risk": false,
         "trace_nodes": [
@@ -656,6 +678,7 @@
         "status": "waiting_hitl",
         "engine": "langgraph",
         "waiting_hitl": true,
+        "would_submit_without_hitl": false,
         "submit_eligible": false,
         "acl_leak_risk": false,
         "trace_nodes": [
@@ -696,6 +719,7 @@
         "status": "waiting_hitl",
         "engine": "langgraph",
         "waiting_hitl": true,
+        "would_submit_without_hitl": false,
         "submit_eligible": false,
         "acl_leak_risk": false,
         "trace_nodes": [
@@ -736,6 +760,7 @@
         "status": "waiting_hitl",
         "engine": "langgraph",
         "waiting_hitl": true,
+        "would_submit_without_hitl": false,
         "submit_eligible": false,
         "acl_leak_risk": false,
         "trace_nodes": [
@@ -776,6 +801,7 @@
         "status": "waiting_hitl",
         "engine": "langgraph",
         "waiting_hitl": true,
+        "would_submit_without_hitl": false,
         "submit_eligible": false,
         "acl_leak_risk": false,
         "trace_nodes": [
@@ -810,6 +836,7 @@
         "status": "waiting_hitl",
         "engine": "langgraph",
         "waiting_hitl": true,
+        "would_submit_without_hitl": false,
         "submit_eligible": false,
         "acl_leak_risk": false,
         "trace_nodes": [

@@ -14,7 +14,7 @@ _DEFAULT_KEY_ROLE_MAP: dict[str, str] = {
     "demo-parts": "parts_clerk",
     "demo-chief": "station_chief",
     "demo-finance": "finance",
-    "demo-hr": "finance",
+    "demo-hr": "hr",
 }
 
 _DEFAULT_CHIEF_KEYS = frozenset({"demo-chief"})
@@ -24,6 +24,7 @@ _DEFAULT_ROLE_DEFAULT_KEYS: dict[str, str] = {
     "parts_clerk": "demo-parts",
     "station_chief": "demo-chief",
     "finance": "demo-finance",
+    "hr": "demo-hr",
     "general": "demo-key",
 }
 
@@ -65,13 +66,18 @@ def _role_default_keys() -> dict[str, str]:
     return dict(_DEFAULT_ROLE_DEFAULT_KEYS)
 
 
-# 模块级别名（测试/导入兼容）
-KEY_ROLE_MAP = _key_role_map()
-CHIEF_KEYS = _chief_keys()
-ROLE_DEFAULT_KEYS = _role_default_keys()
+def __getattr__(name: str) -> Any:
+    """运行时读取 demo_keys.json，避免 import 时固化。"""
+    if name == "KEY_ROLE_MAP":
+        return _key_role_map()
+    if name == "CHIEF_KEYS":
+        return _chief_keys()
+    if name == "ROLE_DEFAULT_KEYS":
+        return _role_default_keys()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-_ROLE_CLAIM_ALLOWED = frozenset({"technician", "parts_clerk", "station_chief", "finance", "general"})
+_ROLE_CLAIM_ALLOWED = frozenset({"technician", "parts_clerk", "station_chief", "finance", "hr", "general"})
 
 
 def resolve_role(api_key: str | None, role_claim: str | None = None) -> str:
@@ -92,9 +98,15 @@ def resolve_role(api_key: str | None, role_claim: str | None = None) -> str:
 
 
 def role_from_api_key(api_key: str | None) -> str:
+    """Key→角色。未知 Key 在 require_known_api_key=True 时不应走到业务路径（API 已 401）。"""
     if not api_key:
         return "technician"
-    return _key_role_map().get(api_key.strip(), "technician")
+    mapped = _key_role_map().get(api_key.strip())
+    if mapped:
+        return mapped
+    # 未知 Key：不再静默提权为技师语义上的「默认放行」；仍返回 technician 仅兼容单测直调，
+    # 生产入口必须先走 assert_known_api_key。
+    return "technician"
 
 
 def is_known_api_key(api_key: str | None) -> bool:
@@ -122,18 +134,38 @@ def is_station_chief(api_key: str | None = None, role: str | None = None) -> boo
 
 
 def can_submit(role: str) -> bool:
-    return role in {"station_chief"}
+    """是否可直提：读 ROLE_MATRIX.can_submit_direct（仅站长）。"""
+    from app.policy.role_graph import role_can_submit_direct
+
+    return role_can_submit_direct(role)
 
 
 def can_create_draft(role: str) -> bool:
-    return role in {"technician", "parts_clerk", "station_chief", "general"}
+    """是否可出草稿：读 ROLE_MATRIX.can_draft（与矩阵单源，禁硬编码双轨）。"""
+    from app.policy.role_graph import role_can_draft
+
+    return role_can_draft(role)
 
 
 def can_see_full_conflict(role: str) -> bool:
+    # hr 仅知识查阅，冲突明细脱敏（与配件岗类似）
     return role in {"technician", "station_chief", "general", "finance"}
 
 
 def evaluate_submit_eligible(state: dict[str, Any]) -> tuple[bool, list[str]]:
+    from app.policy.hitl_layers import (
+        LAYER_CONFLICT,
+        LAYER_DEGRADE,
+        LAYER_LEDGER,
+        LAYER_SHORTAGE,
+        LAYER_SLA,
+        LAYER_STATION,
+        LAYER_WEATHER,
+        LAYER_INTENT,
+        any_business_layer_confirmed,
+        layer_confirmed,
+    )
+
     blockers: list[str] = []
     role = state.get("role") or "technician"
     hitl = state.get("hitl") or {}
@@ -142,34 +174,56 @@ def evaluate_submit_eligible(state: dict[str, Any]) -> tuple[bool, list[str]]:
     parts = state.get("parts_check") or {}
     draft = state.get("work_order_draft") or {}
     ticket = state.get("service_ticket") or {}
-    sla = state.get("sla_flags") or {}
-    approved = bool(hitl.get("resolved") and hitl.get("decision") == "approve")
+    # 角色放行 ≠ 业务层放行：approve 仅过 POL-ROLE；冲突/缺料等须对应 confirmations
+    role_approved = any_business_layer_confirmed(hitl)
 
     if not draft:
         blockers.append("尚无工单草稿")
     if critic and not critic.get("passed", True):
         blockers.append("质检未通过: " + "; ".join(critic.get("reasons") or []))
-    if conflict.get("present") and not approved:
-        blockers.append(tag("POL-CONFLICT-01"))
-    if parts.get("shortage") and not approved:
-        blockers.append(tag("POL-PARTS-01", str(parts.get("note") or "")))
-    if critic.get("force_hitl") and not approved:
+    if conflict.get("present") and not layer_confirmed(hitl, LAYER_CONFLICT):
+        blockers.append(tag("POL-CONFLICT-01", "须 confirmations.conflict=true"))
+    if parts.get("shortage") and not layer_confirmed(hitl, LAYER_SHORTAGE):
+        blockers.append(tag("POL-PARTS-01", str(parts.get("note") or "须 confirmations.shortage=true")))
+    if (parts.get("ledger_degraded") or parts.get("unknown_parts") or parts.get("model_mismatch")) and not layer_confirmed(
+        hitl, LAYER_LEDGER
+    ):
+        blockers.append(tag("POL-PARTS-02", str(parts.get("note") or "须 confirmations.ledger=true")))
+    if critic.get("force_hitl") and not role_approved:
         blockers.append(tag("POL-HITL-WAIT", "质检要求人确"))
-    if state.get("rag_degraded") and not approved:
-        blockers.append(tag("POL-DEGRADE-01"))
-    if ticket.get("second_visit") and not approved:
-        blockers.append(tag("POL-SLA-01"))
-    if ticket.get("urgent") and not approved:
-        blockers.append(tag("POL-SLA-02"))
+    if state.get("rag_degraded") and not layer_confirmed(hitl, LAYER_DEGRADE):
+        blockers.append(tag("POL-DEGRADE-01", "须 confirmations.degrade=true"))
+    # SLA：以 service_ticket 为准（sla_flags 仅为展示派生，不在此双读）
+    if ticket.get("second_visit") and not layer_confirmed(hitl, LAYER_SLA):
+        blockers.append(tag("POL-SLA-01", "须 confirmations.sla=true"))
+    if ticket.get("urgent") and not layer_confirmed(hitl, LAYER_SLA):
+        blockers.append(tag("POL-SLA-02", "须 confirmations.sla=true"))
     if hitl.get("required") and not hitl.get("resolved"):
         blockers.append(tag("POL-HITL-WAIT"))
     if hitl.get("resolved") and hitl.get("decision") == "reject":
         blockers.append(tag("POL-HITL-REJECT", str(hitl.get("note") or "")))
-    if hitl.get("resolved") and hitl.get("decision") == "edit":
-        blockers.append(tag("POL-HITL-EDIT", str(hitl.get("note") or "需改单说明")))
-    if not (ticket.get("station") or "").strip():
-        blockers.append(tag("POL-STATION-01"))
-    if not can_submit(role) and not approved:
+    if hitl.get("resolved") and hitl.get("decision") in {"return", "edit"}:
+        blockers.append(tag("POL-HITL-EDIT", str(hitl.get("note") or "退回补件，禁止提交")))
+    if not (ticket.get("station") or "").strip() and not layer_confirmed(hitl, LAYER_STATION):
+        blockers.append(tag("POL-STATION-01", "须 confirmations.station=true"))
+    if ticket.get("outdoor_weather_risk"):
+        from app.config import get_settings
+
+        if get_settings().enable_weather_pol and not layer_confirmed(hitl, LAYER_WEATHER):
+            blockers.append(tag("POL-WEATHER-01", "须 confirmations.weather=true"))
+    conf = state.get("intent_confidence")
+    from app.domain.intent_rules import resolve_intent_confidence_threshold
+
+    intent_thr = resolve_intent_confidence_threshold()
+    if (
+        state.get("intent") == "fault_dispatch"
+        and conf is not None
+        and float(conf) < intent_thr
+        and not layer_confirmed(hitl, LAYER_INTENT)
+    ):
+        blockers.append(tag("POL-INTENT-01", "须 confirmations.intent=true"))
+    # POL-ROLE-01：非站长须 approve（不要求业务层 confirmations）
+    if not can_submit(str(role)) and not role_approved:
         blockers.append(tag("POL-ROLE-01", f"role={role}"))
 
     # 去重保序

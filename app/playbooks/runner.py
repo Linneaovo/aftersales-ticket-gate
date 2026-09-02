@@ -111,6 +111,17 @@ def validate_playbook_result(spec: dict[str, Any], out: dict[str, Any]) -> dict[
             }
         )
 
+    expect_hints_source = spec.get("expect_hints_source")
+    actual_hints_source = (out.get("parts_check") or {}).get("hints_source")
+    if expect_hints_source and actual_hints_source != expect_hints_source:
+        diffs.append(
+            {
+                "field": "hints_source",
+                "expected": expect_hints_source,
+                "actual": actual_hints_source,
+            }
+        )
+
     return {
         "passed": len(diffs) == 0,
         "diffs": diffs,

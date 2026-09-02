@@ -1,0 +1,112 @@
+{
+  "schema": "intent_eval_report/v1",
+  "generated_at": "2026-08-31T08:53:59.319449+00:00",
+  "fit": {
+    "n_cases": 56,
+    "correct": 56,
+    "accuracy": 1.0,
+    "per_label": {
+      "acl_probe": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "support": 5
+      },
+      "chitchat": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "support": 6
+      },
+      "conflict_review": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "support": 3
+      },
+      "fault_dispatch": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "support": 28
+      },
+      "injection": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "support": 5
+      },
+      "knowledge_only": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "support": 9
+      }
+    },
+    "failures": [],
+    "rule_id_misses": [],
+    "low_confidence_threshold": 0.5,
+    "low_confidence_count": 12,
+    "low_confidence_rate": 0.2143,
+    "mean_confidence": 0.78
+  },
+  "held_out": {
+    "n_cases": 45,
+    "correct": 45,
+    "accuracy": 1.0,
+    "per_label": {
+      "acl_probe": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "support": 4
+      },
+      "chitchat": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "support": 4
+      },
+      "conflict_review": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "support": 8
+      },
+      "fault_dispatch": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "support": 16
+      },
+      "injection": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "support": 3
+      },
+      "knowledge_only": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "support": 10
+      }
+    },
+    "failures": [],
+    "rule_id_misses": [],
+    "low_confidence_threshold": 0.5,
+    "low_confidence_count": 8,
+    "low_confidence_rate": 0.1778,
+    "mean_confidence": 0.8029,
+    "boundary_accuracy": {
+      "knowledge_only_vs_fault": {
+        "n": 6,
+        "accuracy": 1.0
+      },
+      "conflict_vs_fault": {
+        "n": 7,
+        "accuracy": 1.0
+      },
+      "acl_vs_knowledge": {
+        "n": 1,
+        "accuracy": 1.0
+      }
+    }
+  },
+  "min_fit_accuracy": 0.85,
+  "min_held_out_accuracy": 0.75,
+  "ok": true,
+  "rule_id_ok": true,
+  "note": "rule baseline; held_out is primary professionalism signal. expect_rule_id 若钉了则须匹配 fired rule；confidence 为启发式非校准概率。 Re-run after intent_rules.json changes.",
+  "n_cases": 45,
+  "correct": 45,
+  "accuracy": 1.0
+}

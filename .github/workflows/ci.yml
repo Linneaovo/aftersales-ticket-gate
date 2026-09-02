@@ -1,5 +1,10 @@
 name: CI
 
+# L0 离线编排回归（FakeRag）。
+# L1 HTTP 契约联调见 linkage-l1.yml（默认随 PR 跑 Compose stub）。
+# L2 真 RAG+Ollama 见 live-linkage.yml（默认禁用，需 self-hosted）。
+# Standalone scorecard = 本仓控制面毕业证据（无 :8001）。
+
 on:
   push:
     branches: [main, master]
@@ -8,6 +13,7 @@ on:
 
 jobs:
   test:
+    name: Offline FakeRag (≠ Live)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,10 +27,30 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Pytest (offline FakeRag — 生产路径 langgraph)
+      - name: Doc collect drift (no hardcoded pytest N)
+        run: python scripts/check_doc_collect_drift.py
+
+      - name: Parts live allowlist align
+        run: python scripts/check_parts_live_align.py
+
+      - name: Pytest (offline FakeRag — 主路径 langgraph)
         run: python -m pytest -q -m "not integration"
 
-      - name: Offline smoke baseline (DemoRag + compare appendix)
+      - name: Repair persistence after tests
+        run: python -c "from app.tracing.store import repair_persistence; print(repair_persistence())"
+
+      - name: HITL gate + intent held-out + Standalone scorecard (no :8001)
+        run: |
+          python scripts/run_hitl_gate_eval.py
+          python scripts/run_intent_eval.py
+          python scripts/build_governance_scorecard.py --profile standalone
+          python scripts/check_eval_git_sha.py
+          python scripts/check_rag_contract_drift.py
+
+      - name: Live evidence pack schema only (≠ HTTP Live; see linkage-l1 / live-linkage)
+        run: python -m pytest -q tests/test_live_contract.py tests/test_evidence_tier_and_l1_stub.py
+
+      - name: Offline smoke baseline (DemoRag；产物勿作 Portfolio)
         run: python scripts/smoke_with_rag.py --offline
 
       - name: Streamlit syntax check

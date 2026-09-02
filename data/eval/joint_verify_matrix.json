@@ -1,0 +1,60 @@
+{
+  "schema": "joint_verify_matrix/v1",
+  "generated_at": "2026-09-01T08:40:03.131948+00:00",
+  "mode": "live_matrix",
+  "checks": {
+    "parts_allowlist": {
+      "ok": true,
+      "errors": [],
+      "part_nos": 6
+    },
+    "rag_allowlist_cross": {
+      "ok": true,
+      "returncode": 0,
+      "stdout_tail": "tputs\\\\aftersales-dispatch-copilot\\\\data\\\\parts_live_allowlist.json\",\n  \"allowlist_part_nos\": [\n    \"60212001\",\n    \"60212345\",\n    \"60277011\",\n    \"60288102\",\n    \"60330018\",\n    \"60455021\"\n  ],\n  \"rag_h103_part_nos_sampled\": [],\n  \"rag_parts_outside_allowlist_advisory\": [],\n  \"errors\": [],\n  \"note\": \"single SSOT at Copilot allowlist; RAG validates only\"\n}\n[OK] copilot parts allowlist SSOT check\n"
+    },
+    "V3_no_silent_fallback": {
+      "ok": true,
+      "rag_unreachable_config_ok": true,
+      "rag_degraded_ok": true,
+      "detail": "env.demo RAG_AUTO_FALLBACK=0 + REQUIRE_LIVE/BLOCK；drill rag_degraded"
+    },
+    "contract_version": {
+      "ok": true,
+      "rag": "2026-08-29.1",
+      "copilot": "2026-08-29.1"
+    },
+    "submit_gate": {
+      "ok": true,
+      "submit_require_copilot_token": true,
+      "token_configured": true
+    },
+    "V2_probe_not_business": {
+      "ok": true,
+      "errors": [],
+      "source": "live_rag_contract_check"
+    },
+    "V1_no_token_reject": {
+      "ok": true,
+      "strict_all_ok": true,
+      "red_ok": true,
+      "source": "demo_strict_submit_check"
+    }
+  },
+  "claim_rules": {
+    "standalone_green": "门禁仓可独立验收",
+    "design_only": "协同设计已落地（未验证 Live）",
+    "live_verified_required": "本机 Live 联调通过",
+    "token_is_demo_ownership": true,
+    "plan_b_not_live_evidence": true
+  },
+  "required_ok": true,
+  "live_matrix_ok": true,
+  "evidence_pack": {
+    "ran": true,
+    "exit_code": 0,
+    "live_verified": true,
+    "portfolio_claimable": true
+  },
+  "suggested_claim": "本机 Live 联调通过（live_verified=true 且 synergy 可宣称）"
+}

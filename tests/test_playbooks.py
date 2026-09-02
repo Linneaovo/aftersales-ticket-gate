@@ -15,7 +15,7 @@ from tests.test_core import FakeRag
 
 ROOT = Path(__file__).resolve().parents[1]
 PLAYBOOKS = sorted((ROOT / "data" / "playbooks").glob("*.json"))
-LANGGRAPH_SPOTLIGHT = {"p1_xingsha_h103", "p2_warranty_conflict", "p7_second_visit_shortage"}
+LANGGRAPH_SPOTLIGHT = {p.stem for p in PLAYBOOKS}
 
 
 def _fake_rag_for_question(question: str, parts: list[str] | None = None) -> FakeRag:
@@ -76,7 +76,7 @@ def test_playbook_expectations_langgraph(playbook_path: Path):
 
 @pytest.mark.parametrize("playbook_id", sorted(LANGGRAPH_SPOTLIGHT))
 def test_playbook_spotlight_matches_fallback(playbook_id: str):
-    """核心剧本：langgraph 与 fallback 行为一致（容灾路径不退化）。"""
+    """核心剧本：非 HITL 时两引擎 status 一致；HITL 时 fallback 须 failed（禁止假 waiting_hitl）。"""
     path = ROOT / "data" / "playbooks" / f"{playbook_id}.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     question = str(data.get("question") or "")
@@ -84,7 +84,13 @@ def test_playbook_spotlight_matches_fallback(playbook_id: str):
     client = _fake_rag_for_question(question, parts=hints or None)
     out_lg = _run_playbook(data, engine="langgraph", client=client)
     out_fb = _run_playbook(data, engine="fallback", client=client)
-    assert out_lg.get("status") == out_fb.get("status"), (
-        f"{playbook_id}: langgraph={out_lg.get('status')} fallback={out_fb.get('status')}"
-    )
     assert out_lg.get("intent") == out_fb.get("intent")
+    if out_lg.get("status") == "waiting_hitl":
+        assert out_fb.get("status") == "failed", (
+            f"{playbook_id}: HITL 场景 fallback 须 failed，got {out_fb.get('status')}"
+        )
+        assert "fallback" in str(out_fb.get("error") or "").lower()
+    else:
+        assert out_lg.get("status") == out_fb.get("status"), (
+            f"{playbook_id}: langgraph={out_lg.get('status')} fallback={out_fb.get('status')}"
+        )

@@ -1,0 +1,40 @@
+{
+  "schema": "parts_gate_ab_live/v1",
+  "generated_at": "2026-09-01T08:40:03.125702+00:00",
+  "present": true,
+  "rag_mode": "live",
+  "cases": {
+    "A_p1_xingsha_h103": {
+      "playbook": "p1_xingsha_h103",
+      "result": {
+        "status": "waiting_hitl",
+        "rag_client_mode": "live",
+        "shortage": true,
+        "has_pol_parts_01": true,
+        "policy_ids": [
+          "POL-PARTS-01"
+        ],
+        "hitl_reasons": [
+          "[POL-PARTS-01] 配件缺料须人确调拨或改约: 建议：经开备件周转点调拨 · 预计 4h · DEMO电话 000-DEMO-5600（虚构演示热线，非任何真实服务站号码）"
+        ]
+      },
+      "expect": "waiting_hitl + POL-PARTS-01 + shortage",
+      "passed": true
+    },
+    "B_p1b_no_shortage_ready": {
+      "playbook": "p1b_no_shortage_ready",
+      "result": {
+        "status": "succeeded",
+        "rag_client_mode": "live",
+        "shortage": false,
+        "has_pol_parts_01": false,
+        "policy_ids": [],
+        "hitl_reasons": []
+      },
+      "expect": "no POL-PARTS-01",
+      "passed": true
+    }
+  },
+  "all_ok": true,
+  "narrative": "Live 剧本 A/B：同仓门禁；禁止用 fakerag_stub 冒充 Live 反证"
+}

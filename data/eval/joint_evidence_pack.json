@@ -1,0 +1,272 @@
+{
+  "schema": "joint_evidence_pack/v1",
+  "generated_at": "2026-09-01T11:36:46.862960+00:00",
+  "git_sha": "bbdb43c",
+  "mode": "from_artifacts",
+  "evidence_tier": "artifacts",
+  "live_verified": false,
+  "l1_verified": false,
+  "portfolio_claimable": false,
+  "parts_gate_ab_live_ok": false,
+  "portfolio_warning": "artifacts_only：仅合并历史 live_*.json，未当场探测 :8001/:8002。evidence_tier=artifacts，永不可称 L2；请 --live（L2）或 run_l1_linkage（L1）。",
+  "hosts": {
+    "rag": "http://127.0.0.1:8001",
+    "copilot": "http://127.0.0.1:8002"
+  },
+  "narrative": {
+    "enterprise_rag": "知识是否可看、是否冲突、草稿是否有据（ACL / citations / draft）",
+    "copilot": "在有据前提下谁能开单、缺料/冲突/降级是否必须人确；提交仅为 rag_mock_inbox",
+    "not_erp": "is_production_ticket=false · 不做技师派工/排班",
+    "main_demo": [
+      "P1 POL-PARTS-01",
+      "P8 角色脱敏+冲突",
+      "A-07 裸链漏 HITL"
+    ],
+    "ui_roles": {
+      "rag_ui": "售后知识治理 Copilot :8501（开发者）",
+      "copilot_ui": "报修开单门禁 Copilot :8502（开发者，非站长作业 App）"
+    },
+    "inbox_ownership": "RAG=落箱能力；仅 Copilot 站长批准后 submit；探针≠业务路径",
+    "student_data": "台账/站务为演示主数据；可起 mock_parts_wms，非主机厂生产库"
+  },
+  "policy_catalog_version": "2026-08-28.opt2",
+  "core_policies": [
+    "POL-ROLE-01",
+    "POL-CONFLICT-01",
+    "POL-PARTS-01",
+    "POL-SLA-01",
+    "POL-DEGRADE-01"
+  ],
+  "interview_core_policies": [
+    "POL-ROLE-01",
+    "POL-CONFLICT-01",
+    "POL-PARTS-01",
+    "POL-SLA-01",
+    "POL-DEGRADE-01"
+  ],
+  "acceptance_layers": {
+    "L0_pytest_fakerag": "offline orchestration only; not HTTP linkage",
+    "L1_compose_contract": "linkage-l1.yml / docker-compose.joint.yml；证契约不证检索",
+    "L2_live_rag": "live-linkage.yml self-hosted/dispatch；须 live_verified",
+    "pytest_offline_collect": 366,
+    "pytest_full_collect": 374,
+    "live_json": "necessary but not sufficient without live_verified + evidence_tier=L2",
+    "ci_l2_live": "live-linkage.yml default off (no GH-hosted Ollama)",
+    "from_artifacts": "never L2"
+  },
+  "live_integration_manual": {
+    "all_ok": true,
+    "passed": 11,
+    "total": 11,
+    "script_version": "2026-08-28.p0",
+    "checklist_hash": "28cc2ef867c3"
+  },
+  "live_function_test": {
+    "all_ok": true,
+    "passed": 29,
+    "total": 29,
+    "script_version": "2026-08-28.p0",
+    "checklist_hash": "d91c86f71ce4"
+  },
+  "parts_gate_ab": {
+    "schema": "parts_gate_ab/v2",
+    "offline": {
+      "present": true,
+      "all_ok": true,
+      "rag_mode": "fakerag_stub",
+      "schema": "parts_gate_ab/v1"
+    },
+    "live": {
+      "present": false,
+      "all_ok": false,
+      "rag_mode": "live",
+      "schema": null,
+      "skip_reason": "from_artifacts_only_no_live_ab"
+    },
+    "all_ok": true,
+    "rag_mode": "nested",
+    "present": true
+  },
+  "hard_claims": {
+    "rag_mode_required": "live",
+    "destination": "rag_mock_inbox",
+    "is_production_ticket": false,
+    "not_erp_dispatch": true,
+    "decision_certificate_schema": "decision_certificate/v1",
+    "decision_certificate_assurance": "state_snapshot_not_tamper_proof",
+    "standalone_ne_live": true,
+    "token_is_demo_ownership_not_prod_auth": true,
+    "plan_b_not_live_evidence": true,
+    "from_artifacts_not_live_evidence": true
+  },
+  "claim_rules": {
+    "standalone_green": "门禁仓可独立验收",
+    "design_ready": "协同设计已落地（未验证 Live）",
+    "l1_ok": "evidence_tier=L1 且 l1_verified=true → 可宣称 CI/Compose HTTP 契约联调",
+    "live_ok": "仅 evidence_tier=L2 且 live_verified=true 且 portfolio_claimable=true 可宣称本机 Live",
+    "forbidden": [
+      "pytest FakeRag = Live / L2",
+      "L1 stub = live_verified / 检索质量",
+      "Plan B / from_artifacts = 联调通过 / L2",
+      "token/source = 生产鉴权",
+      "Standalone 绿顶 Live 绿"
+    ]
+  },
+  "portfolio_do_not_attach": [
+    "smoke_report.json",
+    "compare_report.json as live evidence",
+    "from_artifacts pack without live_verified",
+    "parts_gate_ab.offline as live reverse-proof",
+    "l1_linkage_report as L2 live_verified"
+  ],
+  "governance_scorecard_ref": "data/eval/governance_scorecard.json",
+  "joint_failure_drill_ref": "data/eval/joint_failure_drill.json",
+  "synergy_checks": {
+    "schema": "synergy_checks/v1",
+    "required_ok": false,
+    "checks": [
+      {
+        "id": "draft_then_gate",
+        "failure_mode": "F1",
+        "required": true,
+        "ok": false,
+        "detail": "P1 live sample must hit POL-PARTS-01 after draft/parts"
+      },
+      {
+        "id": "hitl_then_inbox",
+        "failure_mode": "F2",
+        "required": true,
+        "ok": false,
+        "detail": "approve → submit → inbox source=copilot_hitl + run_id"
+      },
+      {
+        "id": "probe_not_business",
+        "failure_mode": "F3",
+        "required": true,
+        "ok": true,
+        "detail": "no-token business rejected; probe≠business (data/eval/demo_strict_submit_check.json)"
+      },
+      {
+        "id": "parts_ab_live",
+        "failure_mode": "F4",
+        "required": true,
+        "ok": false,
+        "detail": "parts_gate_ab.offline + .live both all_ok"
+      },
+      {
+        "id": "contract_aligned",
+        "failure_mode": "F5",
+        "required": true,
+        "ok": false,
+        "detail": "RAG consumer_contract_version_supported == Copilot CONTRACT_VERSION"
+      },
+      {
+        "id": "degrade_blocks_auto_submit",
+        "failure_mode": "F6",
+        "required": true,
+        "ok": true,
+        "detail": "joint_failure_drill rag_degraded (data/eval/joint_failure_drill.json#rag_degraded)"
+      },
+      {
+        "id": "acl_l1_or_l2",
+        "failure_mode": "F8",
+        "required": true,
+        "ok": true,
+        "detail": "ACL L1/L2 matrix (data/eval/acl_matrix.json)"
+      }
+    ],
+    "failure_mode_coverage": {
+      "F1": false,
+      "F2": false,
+      "F3": true,
+      "F4": false,
+      "F5": false,
+      "F6": true,
+      "F8": true
+    },
+    "failure_mode_required_coverage": {
+      "required": [
+        "F1",
+        "F2",
+        "F3",
+        "F4",
+        "F5",
+        "F6",
+        "F8"
+      ],
+      "covered": 3,
+      "total": 7,
+      "ratio": 0.42857142857142855
+    }
+  },
+  "governance_scorecard": {
+    "present": true,
+    "all_ok": true,
+    "generated_at": "2026-08-31T08:55:49.076488+00:00"
+  },
+  "joint_failure_drill": {
+    "present": true,
+    "all_ok": true,
+    "generated_at": "2026-09-01T08:40:03.319027+00:00"
+  },
+  "rag_eval_index": {
+    "schema": "rag_eval_index/v1",
+    "owner": "enterprise-rag",
+    "copilot_claims_mrr": false,
+    "combined_score_forbidden": true,
+    "note": "检索/MRR/金标归知识仓；本仓只索引摘要，governance_scorecard 只管门禁正确性",
+    "present": true,
+    "source_path": "enterprise-rag/data/demo/evaluation_baseline.json",
+    "refs": [
+      "enterprise-rag/data/demo/evaluation_baseline.json",
+      "data/eval/governance_scorecard.json"
+    ],
+    "sample_count": 104,
+    "knowledge_base": "demo-kb",
+    "headline": {
+      "fusion_mrr": 0.838,
+      "dense_mrr": 0.874,
+      "bm25_mrr": 0.7829,
+      "recall_at_k": 1.0,
+      "scheme": "A"
+    },
+    "full_retrieval_ablation": {
+      "sample_count": 87,
+      "mrr": 0.8633
+    },
+    "acl_spotlight": {
+      "sampled_acl_n": 2,
+      "sampled_acl_ok_n": 2,
+      "sampled_pass_rate": 1.0,
+      "note": "ACL 抽样来自 RAG generation_spotlight；非 Copilot 门禁分"
+    },
+    "param_fingerprint": {
+      "scheme": "A",
+      "change_default_params": false,
+      "dense_weight": 0.7,
+      "bm25_weight": 0.3,
+      "use_reranker": false
+    },
+    "skip_reason": null
+  },
+  "acl_matrix": {
+    "present": true,
+    "all_ok": true,
+    "matrix": {
+      "l1_only": true,
+      "l2_only": true,
+      "dual_short_circuit": true
+    },
+    "generated_at": "2026-08-30T03:07:33.575597+00:00",
+    "ref": "data/eval/acl_matrix.json"
+  },
+  "feedback_roundtrip": {
+    "present": true,
+    "all_ok": true,
+    "required_for_claimable": false,
+    "offline_ok": true,
+    "live_ok": null,
+    "ref": "data/eval/feedback_roundtrip.json",
+    "note": "advisory B6：degraded→down 按 run_id 回读；不挡 claimable"
+  }
+}

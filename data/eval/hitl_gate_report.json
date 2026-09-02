@@ -1,0 +1,531 @@
+{
+  "schema": "hitl_gate_report/v1",
+  "generated_at": "2026-08-31T05:41:12.310899+00:00",
+  "git_sha": "bbdb43c",
+  "mode": "offline_goldset",
+  "note": "offline_goldset_not_production_precision；分母见 n_cases；非线上 SLA",
+  "n_cases": 27,
+  "all_ok": true,
+  "failed_ids": [],
+  "failed_details": [],
+  "metrics": {
+    "should_hitl_recall": 1.0,
+    "false_hitl_rate": 0.0,
+    "leak_submit_count": 0,
+    "case_pass_rate": 1.0,
+    "n_should_hitl": 15,
+    "n_should_not_hitl": 12
+  },
+  "thresholds": {
+    "should_hitl_recall_min": 0.92,
+    "false_hitl_rate_max": 0.08,
+    "leak_submit_count_max": 0
+  },
+  "results": [
+    {
+      "id": "pb_p1",
+      "split": "core",
+      "ok": true,
+      "expect_should_hitl": true,
+      "actual_hitl": true,
+      "status": "waiting_hitl",
+      "hitl_ok": true,
+      "policy_ok": true,
+      "status_ok": true,
+      "leak_submit": false,
+      "policy_ids": [
+        "POL-PARTS-01"
+      ],
+      "pending_layers": [
+        "shortage"
+      ],
+      "layer_diff": null,
+      "source": "playbook:p1_xingsha_h103"
+    },
+    {
+      "id": "pb_p1b",
+      "split": "core",
+      "ok": true,
+      "expect_should_hitl": false,
+      "actual_hitl": false,
+      "status": "succeeded",
+      "hitl_ok": true,
+      "policy_ok": true,
+      "status_ok": true,
+      "leak_submit": false,
+      "policy_ids": [],
+      "pending_layers": [],
+      "layer_diff": null,
+      "source": "playbook:p1b_no_shortage_ready"
+    },
+    {
+      "id": "pb_p2",
+      "split": "core",
+      "ok": true,
+      "expect_should_hitl": true,
+      "actual_hitl": true,
+      "status": "waiting_hitl",
+      "hitl_ok": true,
+      "policy_ok": true,
+      "status_ok": true,
+      "leak_submit": false,
+      "policy_ids": [
+        "POL-CONFLICT-01"
+      ],
+      "pending_layers": [
+        "conflict"
+      ],
+      "layer_diff": null,
+      "source": "playbook:p2_warranty_conflict"
+    },
+    {
+      "id": "pb_p3",
+      "split": "core",
+      "ok": true,
+      "expect_should_hitl": false,
+      "actual_hitl": false,
+      "status": "rejected",
+      "hitl_ok": true,
+      "policy_ok": true,
+      "status_ok": true,
+      "leak_submit": false,
+      "policy_ids": [],
+      "pending_layers": [],
+      "layer_diff": null,
+      "source": "playbook:p3_acl_salary"
+    },
+    {
+      "id": "pb_p4",
+      "split": "core",
+      "ok": true,
+      "expect_should_hitl": false,
+      "actual_hitl": false,
+      "status": "succeeded",
+      "hitl_ok": true,
+      "policy_ok": true,
+      "status_ok": true,
+      "leak_submit": false,
+      "policy_ids": [],
+      "pending_layers": [],
+      "layer_diff": null,
+      "source": "playbook:p4_manual_only"
+    },
+    {
+      "id": "pb_p5",
+      "split": "core",
+      "ok": true,
+      "expect_should_hitl": true,
+      "actual_hitl": true,
+      "status": "waiting_hitl",
+      "hitl_ok": true,
+      "policy_ok": true,
+      "status_ok": true,
+      "leak_submit": false,
+      "policy_ids": [
+        "POL-PARTS-01"
+      ],
+      "pending_layers": [
+        "shortage"
+      ],
+      "layer_diff": null,
+      "source": "playbook:p5_parts_shortage"
+    },
+    {
+      "id": "pb_p5b",
+      "split": "core",
+      "ok": true,
+      "expect_should_hitl": true,
+      "actual_hitl": true,
+      "status": "waiting_hitl",
+      "hitl_ok": true,
+      "policy_ok": true,
+      "status_ok": true,
+      "leak_submit": false,
+      "policy_ids": [
+        "POL-PARTS-01"
+      ],
+      "pending_layers": [
+        "shortage"
+      ],
+      "layer_diff": null,
+      "source": "playbook:p5b_parts_from_draft"
+    },
+    {
+      "id": "pb_p6",
+      "split": "core",
+      "ok": true,
+      "expect_should_hitl": false,
+      "actual_hitl": false,
+      "status": "rejected",
+      "hitl_ok": true,
+      "policy_ok": true,
+      "status_ok": true,
+      "leak_submit": false,
+      "policy_ids": [],
+      "pending_layers": [],
+      "layer_diff": null,
+      "source": "playbook:p6_chitchat"
+    },
+    {
+      "id": "pb_p7",
+      "split": "core",
+      "ok": true,
+      "expect_should_hitl": true,
+      "actual_hitl": true,
+      "status": "waiting_hitl",
+      "hitl_ok": true,
+      "policy_ok": true,
+      "status_ok": true,
+      "leak_submit": false,
+      "policy_ids": [
+        "POL-PARTS-01",
+        "POL-SLA-01",
+        "POL-SLA-02"
+      ],
+      "pending_layers": [
+        "shortage",
+        "sla"
+      ],
+      "layer_diff": null,
+      "source": "playbook:p7_second_visit_shortage"
+    },
+    {
+      "id": "pb_p8",
+      "split": "core",
+      "ok": true,
+      "expect_should_hitl": true,
+      "actual_hitl": true,
+      "status": "waiting_hitl",
+      "hitl_ok": true,
+      "policy_ok": true,
+      "status_ok": true,
+      "leak_submit": false,
+      "policy_ids": [
+        "POL-CONFLICT-01"
+      ],
+      "pending_layers": [
+        "conflict"
+      ],
+      "layer_diff": null,
+      "source": "playbook:p8_parts_clerk_conflict"
+    },
+    {
+      "id": "inline_no_hitl_stock",
+      "split": "core",
+      "ok": true,
+      "expect_should_hitl": false,
+      "actual_hitl": false,
+      "status": "succeeded",
+      "hitl_ok": true,
+      "policy_ok": true,
+      "status_ok": true,
+      "leak_submit": false,
+      "policy_ids": [],
+      "pending_layers": [],
+      "layer_diff": null,
+      "source": null
+    },
+    {
+      "id": "inline_chief_still_parts",
+      "split": "core",
+      "ok": true,
+      "expect_should_hitl": true,
+      "actual_hitl": true,
+      "status": "waiting_hitl",
+      "hitl_ok": true,
+      "policy_ok": true,
+      "status_ok": true,
+      "leak_submit": false,
+      "policy_ids": [
+        "POL-PARTS-01"
+      ],
+      "pending_layers": [
+        "shortage"
+      ],
+      "layer_diff": null,
+      "source": null
+    },
+    {
+      "id": "inline_missing_station",
+      "split": "boundary",
+      "ok": true,
+      "expect_should_hitl": true,
+      "actual_hitl": true,
+      "status": "waiting_hitl",
+      "hitl_ok": true,
+      "policy_ok": true,
+      "status_ok": true,
+      "leak_submit": false,
+      "policy_ids": [
+        "POL-STATION-01"
+      ],
+      "pending_layers": [
+        "station"
+      ],
+      "layer_diff": null,
+      "source": null
+    },
+    {
+      "id": "inline_second_visit_ok_stock",
+      "split": "boundary",
+      "ok": true,
+      "expect_should_hitl": true,
+      "actual_hitl": true,
+      "status": "waiting_hitl",
+      "hitl_ok": true,
+      "policy_ok": true,
+      "status_ok": true,
+      "leak_submit": false,
+      "policy_ids": [
+        "POL-SLA-01"
+      ],
+      "pending_layers": [
+        "sla"
+      ],
+      "layer_diff": null,
+      "source": null
+    },
+    {
+      "id": "inline_conflict_warranty",
+      "split": "boundary",
+      "ok": true,
+      "expect_should_hitl": true,
+      "actual_hitl": true,
+      "status": "waiting_hitl",
+      "hitl_ok": true,
+      "policy_ok": true,
+      "status_ok": true,
+      "leak_submit": false,
+      "policy_ids": [
+        "POL-CONFLICT-01"
+      ],
+      "pending_layers": [
+        "conflict"
+      ],
+      "layer_diff": null,
+      "source": null
+    },
+    {
+      "id": "inline_chitchat_hi",
+      "split": "boundary",
+      "ok": true,
+      "expect_should_hitl": false,
+      "actual_hitl": false,
+      "status": "rejected",
+      "hitl_ok": true,
+      "policy_ok": true,
+      "status_ok": true,
+      "leak_submit": false,
+      "policy_ids": [],
+      "pending_layers": [],
+      "layer_diff": null,
+      "source": null
+    },
+    {
+      "id": "inline_injection",
+      "split": "boundary",
+      "ok": true,
+      "expect_should_hitl": false,
+      "actual_hitl": false,
+      "status": "rejected",
+      "hitl_ok": true,
+      "policy_ok": true,
+      "status_ok": true,
+      "leak_submit": false,
+      "policy_ids": [],
+      "pending_layers": [],
+      "layer_diff": null,
+      "source": null
+    },
+    {
+      "id": "inline_acl_salary",
+      "split": "boundary",
+      "ok": true,
+      "expect_should_hitl": false,
+      "actual_hitl": false,
+      "status": "rejected",
+      "hitl_ok": true,
+      "policy_ok": true,
+      "status_ok": true,
+      "leak_submit": false,
+      "policy_ids": [],
+      "pending_layers": [],
+      "layer_diff": null,
+      "source": null
+    },
+    {
+      "id": "inline_manual_query",
+      "split": "boundary",
+      "ok": true,
+      "expect_should_hitl": false,
+      "actual_hitl": false,
+      "status": "succeeded",
+      "hitl_ok": true,
+      "policy_ok": true,
+      "status_ok": true,
+      "leak_submit": false,
+      "policy_ids": [],
+      "pending_layers": [],
+      "layer_diff": null,
+      "source": null
+    },
+    {
+      "id": "inline_shortage_pump2",
+      "split": "boundary",
+      "ok": true,
+      "expect_should_hitl": true,
+      "actual_hitl": true,
+      "status": "waiting_hitl",
+      "hitl_ok": true,
+      "policy_ok": true,
+      "status_ok": true,
+      "leak_submit": false,
+      "policy_ids": [
+        "POL-PARTS-01"
+      ],
+      "pending_layers": [
+        "shortage"
+      ],
+      "layer_diff": null,
+      "source": null
+    },
+    {
+      "id": "inline_instock_filter2",
+      "split": "boundary",
+      "ok": true,
+      "expect_should_hitl": false,
+      "actual_hitl": false,
+      "status": "succeeded",
+      "hitl_ok": true,
+      "policy_ok": true,
+      "status_ok": true,
+      "leak_submit": false,
+      "policy_ids": [],
+      "pending_layers": [],
+      "layer_diff": null,
+      "source": null
+    },
+    {
+      "id": "inline_parts_clerk_conflict",
+      "split": "boundary",
+      "ok": true,
+      "expect_should_hitl": true,
+      "actual_hitl": true,
+      "status": "waiting_hitl",
+      "hitl_ok": true,
+      "policy_ok": true,
+      "status_ok": true,
+      "leak_submit": false,
+      "policy_ids": [
+        "POL-CONFLICT-01"
+      ],
+      "pending_layers": [
+        "conflict"
+      ],
+      "layer_diff": null,
+      "source": null
+    },
+    {
+      "id": "inline_urgent_dispatch",
+      "split": "boundary",
+      "ok": true,
+      "expect_should_hitl": true,
+      "actual_hitl": true,
+      "status": "waiting_hitl",
+      "hitl_ok": true,
+      "policy_ok": true,
+      "status_ok": true,
+      "leak_submit": false,
+      "policy_ids": [
+        "POL-SLA-02"
+      ],
+      "pending_layers": [
+        "sla"
+      ],
+      "layer_diff": null,
+      "source": null
+    },
+    {
+      "id": "inline_reject_path_not_hitl",
+      "split": "boundary",
+      "ok": true,
+      "expect_should_hitl": false,
+      "actual_hitl": false,
+      "status": "rejected",
+      "hitl_ok": true,
+      "policy_ok": true,
+      "status_ok": true,
+      "leak_submit": false,
+      "policy_ids": [],
+      "pending_layers": [],
+      "layer_diff": null,
+      "source": null
+    },
+    {
+      "id": "inline_weak_oral_station",
+      "split": "boundary",
+      "ok": true,
+      "expect_should_hitl": true,
+      "actual_hitl": true,
+      "status": "waiting_hitl",
+      "hitl_ok": true,
+      "policy_ok": true,
+      "status_ok": true,
+      "leak_submit": false,
+      "policy_ids": [
+        "POL-PARTS-01"
+      ],
+      "pending_layers": [
+        "shortage"
+      ],
+      "layer_diff": null,
+      "source": null
+    },
+    {
+      "id": "inline_contract_probe_style_query",
+      "split": "boundary",
+      "ok": true,
+      "expect_should_hitl": false,
+      "actual_hitl": false,
+      "status": "succeeded",
+      "hitl_ok": true,
+      "policy_ok": true,
+      "status_ok": true,
+      "leak_submit": false,
+      "policy_ids": [],
+      "pending_layers": [],
+      "layer_diff": null,
+      "source": null
+    },
+    {
+      "id": "inline_low_intent_confidence",
+      "split": "boundary",
+      "ok": true,
+      "expect_should_hitl": true,
+      "actual_hitl": true,
+      "status": "waiting_hitl",
+      "hitl_ok": true,
+      "policy_ok": true,
+      "status_ok": true,
+      "leak_submit": false,
+      "policy_ids": [
+        "POL-INTENT-01"
+      ],
+      "pending_layers": [
+        "intent"
+      ],
+      "layer_diff": {
+        "expect": [
+          "intent"
+        ],
+        "actual": [
+          "intent"
+        ],
+        "missing": [],
+        "extra": []
+      },
+      "source": null
+    }
+  ],
+  "source": "data\\eval\\goldsets\\hitl_gate_cases.jsonl"
+}

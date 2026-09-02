@@ -1,0 +1,84 @@
+{
+  "schema": "acl_matrix/v1",
+  "generated_at": "2026-08-30T03:07:33.575597+00:00",
+  "mode": "offline_fakerag",
+  "all_ok": true,
+  "passed": 3,
+  "total": 3,
+  "cases": [
+    {
+      "id": "l1_only",
+      "title": "仅 L1 Copilot 调度拦截",
+      "question": "星沙站技师绩效薪酬保密制度工资系数是多少？",
+      "status": "rejected",
+      "intent": "acl_probe",
+      "rag_called": false,
+      "policy_ids": [
+        "POL-ACL-01"
+      ],
+      "submit_present": false,
+      "expect": {
+        "status": "rejected",
+        "intent": "acl_probe",
+        "rag_called": false,
+        "policy_any": [
+          "POL-ACL-01"
+        ],
+        "no_submit": true
+      },
+      "ok": true,
+      "errors": []
+    },
+    {
+      "id": "l2_only",
+      "title": "仅 L2 RAG acl_denied → POL-GROUND-02",
+      "question": "供应商内部评级标准文档里的A级门槛是什么？",
+      "status": "rejected",
+      "intent": "knowledge_only",
+      "rag_called": true,
+      "policy_ids": [
+        "POL-GROUND-02"
+      ],
+      "submit_present": false,
+      "expect": {
+        "status": "rejected",
+        "rag_called": true,
+        "policy_any": [
+          "POL-GROUND-02"
+        ],
+        "no_submit": true
+      },
+      "ok": true,
+      "errors": []
+    },
+    {
+      "id": "dual_l1_short_circuit",
+      "title": "双层能力下 L1 短路：不调 RAG、不落箱",
+      "question": "星沙站技师绩效薪酬保密制度工资系数是多少？",
+      "status": "rejected",
+      "intent": "acl_probe",
+      "rag_called": false,
+      "policy_ids": [
+        "POL-ACL-01"
+      ],
+      "submit_present": false,
+      "expect": {
+        "status": "rejected",
+        "intent": "acl_probe",
+        "rag_called": false,
+        "policy_any": [
+          "POL-ACL-01"
+        ],
+        "no_submit": true
+      },
+      "ok": true,
+      "errors": []
+    }
+  ],
+  "matrix": {
+    "l1_only": true,
+    "l2_only": true,
+    "dual_short_circuit": true
+  },
+  "note": "L1=Copilot acl_probe；L2=RAG acl_denied→POL-GROUND-02；短路证明不双写混乱"
+}

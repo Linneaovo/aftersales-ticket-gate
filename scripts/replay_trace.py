@@ -1,4 +1,4 @@
-"""答辩备用：回放已保存 trace，避免 Live RAG 120s 空等。
+"""联调备用：回放已保存 trace，避免 Live RAG 120s 空等。
 
 用法：
   python scripts/replay_trace.py <run_id>

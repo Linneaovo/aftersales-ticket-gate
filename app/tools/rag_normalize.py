@@ -20,18 +20,34 @@ def normalize_conflicts(raw: Any) -> list[dict[str, Any]]:
 
 
 def normalize_rag_result(result: dict[str, Any]) -> dict[str, Any]:
-    """统一 conflicts / grounding / sources 结构供质检与 conflict_bundle 消费。"""
+    """统一 conflicts / grounding / sources 结构供质检与 conflict_bundle 消费。
+
+    O3：禁止用 sources 推断 grounded=True（会改变门禁语义）。
+    缺 grounded → False + contract_gate_incomplete，由 detect_rag_degraded 强制 HITL。
+    """
     out = dict(result or {})
     out["conflicts"] = normalize_conflicts(out.get("conflicts"))
     try:
         out["grounding_score"] = float(out.get("grounding_score") or 0.0)
     except (TypeError, ValueError):
         out["grounding_score"] = 0.0
-    if out.get("grounded") is None:
-        out["grounded"] = bool(out.get("sources")) and out["grounding_score"] >= 0.35
+
+    incomplete = bool(out.get("contract_gate_incomplete"))
+    if out.get("_contract_errors"):
+        incomplete = True
+    if "grounded" not in out or out.get("grounded") is None:
+        out["grounded"] = False
+        incomplete = True
+    elif not isinstance(out.get("grounded"), bool):
+        out["grounded"] = False
+        incomplete = True
+
     sources = out.get("sources")
     if sources is None:
         out["sources"] = []
+        incomplete = True
     elif not isinstance(sources, list):
         out["sources"] = [{"chunk": {"source": str(sources), "text": ""}, "score": 0.0}]
+
+    out["contract_gate_incomplete"] = incomplete
     return out

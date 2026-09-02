@@ -1,14 +1,46 @@
 {
+  "_demo_note": "演示站务档案（班组/覆盖/工地别名）。非真实 CRM 主数据。详见 data/SYNTHETIC_DATA_PROVENANCE.md。",
   "primary_station": "长沙星沙服务站",
+  "station_code": "CS-XS-01",
   "station_aliases": {
     "primary": ["星沙", "星沙站", "长沙星沙", "长沙星沙服务站", "星沙服务站", "星沙镇"],
-    "support": ["经开", "经开周转", "经开备件", "经开备件周转点", "榔梨", "黄花"]
+    "support": ["经开", "经开周转", "经开备件", "经开备件周转点"]
+  },
+  "jobsite_aliases": {
+    "榔梨工地": ["榔梨", "榔梨工地"],
+    "黄花工地": ["黄花", "黄花工地"],
+    "浏阳工地": ["浏阳", "浏阳工地"],
+    "望城工地": ["望城", "望城站", "望城工地"],
+    "宁乡工地": ["宁乡", "宁乡站", "宁乡工地"]
   },
   "support_depot": "经开备件周转点",
+  "support_depot_code": "CS-JK-DEPOT",
   "region": "长株潭",
+  "coverage_radius_km": 45,
   "urgent_response_hours": 4,
   "normal_response_hours": 24,
+  "crews": [
+    {
+      "id": "crew-hyd",
+      "name": "液压班-甲",
+      "skills": ["液压", "H103", "主控阀"],
+      "covers_stations": ["长沙星沙服务站"],
+      "shift": "白班",
+      "demo_only": true
+    },
+    {
+      "id": "crew-elec",
+      "name": "电器班-乙",
+      "skills": ["电气", "传感器"],
+      "covers_stations": ["长沙星沙服务站"],
+      "shift": "白班",
+      "demo_only": true
+    }
+  ],
   "rainy_season_note": "雨季户外作业需备注防滑、液压接头防水与电路防护",
+  "outdoor_weather_tokens": ["户外", "雨天", "雨季", "现场淋雨", "露天", "淋雨作业"],
+  "depot_phone": "000-DEMO-5600",
+  "depot_phone_note": "虚构演示热线，非任何真实服务站号码",
   "demo_corpus_hints": [
     "故障码对照表",
     "质保制度",

@@ -7,7 +7,7 @@
     "demo-parts": "parts_clerk",
     "demo-chief": "station_chief",
     "demo-finance": "finance",
-    "demo-hr": "finance"
+    "demo-hr": "hr"
   },
   "chief_keys": ["demo-chief"],
   "role_default_keys": {
@@ -15,6 +15,7 @@
     "parts_clerk": "demo-parts",
     "station_chief": "demo-chief",
     "finance": "demo-finance",
+    "hr": "demo-hr",
     "general": "demo-key"
   }
 }

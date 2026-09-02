@@ -1,0 +1,91 @@
+name: Linkage L1 (HTTP contract)
+
+# 默认可复现联调：Compose 起契约 RAG 桩 + Copilot，跑 L1 验收。
+# 证明：HTTP 契约 / submit 归属 / draft→HITL→inbox
+# 不证明：检索质量、生成、live_verified（那是 L2 / live-linkage.yml）
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  linkage-l1:
+    name: Compose L1 contract linkage
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and start joint stack
+        run: |
+          docker compose -f docker-compose.joint.yml up --build -d
+          docker compose -f docker-compose.joint.yml ps
+
+      - name: Wait for healthy services
+        run: |
+          set -e
+          for i in $(seq 1 40); do
+            rag=$(curl -sf http://127.0.0.1:8001/health || true)
+            echo "try=$i rag=${rag:0:160}"
+            if echo "$rag" | grep -q '"evidence_tier": "L1"'; then
+              if curl -sf -H "X-API-Key: demo-technician" http://127.0.0.1:8002/health >/dev/null; then
+                echo "services healthy"
+                exit 0
+              fi
+            fi
+            sleep 5
+            if [ "$i" -eq 40 ]; then
+              docker compose -f docker-compose.joint.yml logs --tail=120
+              exit 1
+            fi
+          done
+
+      - name: Reset demo state + run L1 linkage
+        run: |
+          docker compose -f docker-compose.joint.yml exec -T api python scripts/reset_demo_state.py
+          docker compose -f docker-compose.joint.yml exec -T api python scripts/run_l1_linkage.py
+
+      - name: Copy L1 artifacts to workspace
+        if: always()
+        run: |
+          mkdir -p data/eval
+          docker compose -f docker-compose.joint.yml cp \
+            api:/app/data/eval/l1_linkage_report.json \
+            data/eval/l1_linkage_report.json || true
+          docker compose -f docker-compose.joint.yml cp \
+            api:/app/data/eval/live_rag_contract_check.json \
+            data/eval/live_rag_contract_check.json || true
+
+      - name: Assert L1 report (not live_verified)
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path("data/eval/l1_linkage_report.json")
+          assert p.exists(), "missing l1_linkage_report.json"
+          data = json.loads(p.read_text(encoding="utf-8"))
+          assert data.get("evidence_tier") == "L1", data.get("evidence_tier")
+          assert data.get("l1_verified") is True, data
+          assert data.get("live_verified") is False, "L1 must never set live_verified"
+          print("OK L1 artifact", data.get("git_sha"), data.get("suggested_claim"))
+          PY
+
+      - name: Upload L1 artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linkage-l1-report
+          path: |
+            data/eval/l1_linkage_report.json
+            data/eval/live_rag_contract_check.json
+          if-no-files-found: warn
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.joint.yml down -v

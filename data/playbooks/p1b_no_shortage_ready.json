@@ -1,6 +1,7 @@
 {
-  "title": "P1b 星沙站 · 有库存 · 技师草稿就绪",
-  "business_background": "SY215C H103 报修，液压滤芯星沙仓有货；技师提单后不阻塞，草稿就绪待站长提交。",
+  "title": "P1b 星沙站 · 有库存对照 · 不触发缺料人确",
+  "business_background": "同 H103 语境，预核有库存滤芯 → 不触发 POL-PARTS-01（对照缺料门禁）。",
+  "demo_honesty": "本剧使用 force parts_hints=液压滤芯做对照；主路径仍以 draft 推荐件为准。",
   "question": "长沙星沙服务站：SY215C 报故障码 H103，请安排报修开单",
   "api_key": "demo-technician",
   "knowledge_base": "demo-kb",
@@ -12,5 +13,6 @@
   "expect_status": "succeeded",
   "expect_intent": "fault_dispatch",
   "expect_trace_prefix": ["supervisor", "rag", "quality", "work_order", "parts"],
-  "expect_hitl_reasons": []
+  "expect_hitl_reasons": [],
+  "expect_hints_source": "force_hints"
 }

@@ -1,0 +1,116 @@
+{
+  "schema": "l1_linkage_report/v1",
+  "evidence_tier": "L1",
+  "generated_at": "2026-09-01T11:46:29.283337+00:00",
+  "git_sha": "bbdb43c",
+  "hosts": {
+    "rag": "http://127.0.0.1:8001",
+    "copilot": "http://127.0.0.1:8002"
+  },
+  "contract_version": "2026-08-29.1",
+  "live_verified": false,
+  "l1_verified": true,
+  "checks": {
+    "rag_health": {
+      "ok": true,
+      "status": 200,
+      "mode": "contract_stub",
+      "evidence_tier": "L1",
+      "contract_version_match": true,
+      "submit_gate": true
+    },
+    "copilot_health": {
+      "ok": true,
+      "status": 200,
+      "rag_mode": "live",
+      "rag_contract_version": "2026-08-29.1",
+      "note": "rag_mode=live 仅表示 HTTP 可达；L1 仍不得 live_verified"
+    },
+    "submit_gate": {
+      "ok": true
+    },
+    "contract": {
+      "ok": true,
+      "errors": [],
+      "detail": {
+        "health": {
+          "ok": true
+        },
+        "ask": {
+          "ok": true,
+          "errors": []
+        },
+        "draft": {
+          "ok": true,
+          "errors": []
+        },
+        "submit": {
+          "ok": true,
+          "errors": []
+        },
+        "submit_ownership": {
+          "ok": true,
+          "errors": [],
+          "ticket_id": "L1-CC909F3C6F"
+        },
+        "inbox": {
+          "ok": true,
+          "errors": []
+        }
+      }
+    },
+    "V1_no_token_reject": {
+      "ok": true,
+      "status_code": 403
+    },
+    "P1_parts_hitl": {
+      "ok": true,
+      "status": "waiting_hitl",
+      "run_id": "5f1ed84b94f4",
+      "policy_ids": [
+        "POL-PARTS-01"
+      ],
+      "rag_client_mode": "live"
+    },
+    "draft_hitl_inbox": {
+      "ok": true,
+      "detail": {
+        "approve_status": 200,
+        "run_status": "succeeded",
+        "destination": "rag_mock_inbox",
+        "source": "copilot_hitl",
+        "submitted_by": "copilot",
+        "ticket_id": "L1-22B0CC2924",
+        "run_id": "5f1ed84b94f4",
+        "inbox_source": "copilot_hitl",
+        "inbox_run_id": "5f1ed84b94f4",
+        "in_business_lane": true
+      }
+    },
+    "V2_probe_not_business": {
+      "ok": true
+    }
+  },
+  "claim": {
+    "name": "HTTP Contract Linkage",
+    "proves": "双仓 HTTP 契约、submit 归属、draft→HITL→inbox",
+    "does_not_prove": "向量检索质量、生成正确性、真 Ollama",
+    "who_runs": "默认 CI（linkage-l1.yml）+ docker compose -f docker-compose.joint.yml",
+    "may_claim": "CI 可复现 HTTP 契约联调",
+    "forbidden_claim": "live_verified / 真模型 Live"
+  },
+  "forbidden": [
+    "称本报告为 live_verified / L2",
+    "称契约桩证明了检索质量",
+    "用 --from-artifacts 冒充本报告"
+  ],
+  "rag_health": {
+    "mode": "contract_stub",
+    "evidence_tier": "L1",
+    "consumer_contract_version_supported": "2026-08-29.1"
+  },
+  "all_ok": true,
+  "suggested_claim": "CI/Compose 可复现 HTTP 契约联调（evidence_tier=L1）；不宣称检索质量或 live_verified",
+  "portfolio_claimable": true,
+  "claim_matrix_ref": "app/eval/evidence_tier.py::CLAIM_MATRIX"
+}

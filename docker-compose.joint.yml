@@ -1,0 +1,83 @@
+# L1 Joint：契约 RAG HTTP 桩 :8001 + Copilot :8002（无 GPU / 无 Ollama）
+#
+# 证明：HTTP 契约、submit 归属、draft→HITL→inbox
+# 不证明：检索质量、生成正确性、live_verified（那是 L2）
+#
+# 用法：
+#   docker compose -f docker-compose.joint.yml up --build -d
+#   docker compose -f docker-compose.joint.yml exec api python scripts/reset_demo_state.py
+#   docker compose -f docker-compose.joint.yml exec api python scripts/run_l1_linkage.py
+#   # 或宿主机：python scripts/run_l1_linkage.py
+#
+# 冷启动目标 < 5min；CI 见 .github/workflows/linkage-l1.yml
+
+services:
+  rag-stub:
+    build: .
+    container_name: copilot-l1-rag-stub
+    ports:
+      - "8001:8001"
+    environment:
+      SUBMIT_REQUIRE_COPILOT_TOKEN: "1"
+      COPILOT_SUBMIT_TOKEN: "demo-copilot-submit-shared"
+    command: >
+      python scripts/rag_contract_stub.py
+      --host 0.0.0.0
+      --port 8001
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import httpx; r=httpx.get('http://127.0.0.1:8001/health', timeout=5); r.raise_for_status(); assert r.json().get('evidence_tier')=='L1'",
+        ]
+      interval: 10s
+      timeout: 8s
+      retries: 8
+      start_period: 15s
+
+  api:
+    build: .
+    container_name: copilot-l1-api
+    ports:
+      - "8002:8002"
+    env_file:
+      - .env.joint
+    environment:
+      AGENT_HOST: "0.0.0.0"
+      AGENT_PORT: "8002"
+      RAG_BASE_URL: "http://rag-stub:8001"
+      COPILOT_BASE_URL: "http://127.0.0.1:8002"
+      SUBMIT_DESTINATION: "rag_mock_inbox"
+      DEMO_OFFLINE: "0"
+      RAG_AUTO_FALLBACK: "0"
+      REQUIRE_LIVE: "1"
+      BLOCK_RUNS_WHEN_NOT_LIVE: "1"
+      COPILOT_SUBMIT_TOKEN: "demo-copilot-submit-shared"
+      CONTRACT_VALIDATE: "strict"
+    volumes:
+      - copilot-l1-data:/app/data
+    depends_on:
+      rag-stub:
+        condition: service_healthy
+    command: >
+      uvicorn app.main:app
+      --host 0.0.0.0
+      --port 8002
+      --workers 1
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import httpx; httpx.get('http://127.0.0.1:8002/health', timeout=8).raise_for_status()",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+      start_period: 25s
+
+volumes:
+  copilot-l1-data:

@@ -1,6 +1,7 @@
 {
   "title": "P1 星沙站接单 · H103 液压无力报修",
-  "business_background": "3月12日14:20，星沙站客户来电：SY215C动臂抬升缓慢，屏显H103。技师张伟现场拍照后提单，需检索→质检→配件预核→站长刘波确认。",
+  "business_background": "星沙站 SY215C 动臂无力、H103；draft 推荐缺料件触发 POL-PARTS-01。有库存对照见 p1b。",
+  "demo_honesty": "台账为演示 JSON；主路径 hints 来自 draft。改 stock>0 可对照缺料门禁。",
   "question": "长沙星沙服务站：SY215C 报故障码 H103，客户反映动臂液压无力，请安排报修开单",
   "api_key": "demo-technician",
   "knowledge_base": "demo-kb",
@@ -11,5 +12,6 @@
   "expect_status": "waiting_hitl",
   "expect_intent": "fault_dispatch",
   "expect_trace_prefix": ["supervisor", "rag", "quality", "work_order", "parts", "hitl"],
-  "expect_hitl_reasons": ["POL-PARTS-01"]
+  "expect_hitl_reasons": ["POL-PARTS-01"],
+  "expect_hints_source": "rag_draft"
 }

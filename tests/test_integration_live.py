@@ -32,12 +32,28 @@ def _copilot_up() -> bool:
         return False
 
 
+def _copilot_live_ready() -> bool:
+    """Copilot 须 Live 配置（非 Standalone / demo_offline），否则 integration 应 skip。"""
+    try:
+        body = httpx.get(f"{COPILOT_BASE}/health", headers=TECH, timeout=_HEALTH_PROBE_TIMEOUT).json()
+    except Exception:
+        return False
+    if body.get("runtime_mode") == "standalone" or body.get("demo_offline"):
+        return False
+    return body.get("rag_mode") == "live"
+
+
 def _live_stack_up() -> bool:
-    return _rag_up() and _copilot_up()
+    return _rag_up() and _copilot_up() and _copilot_live_ready()
+
+
+_LIVE_SKIP_REASON = (
+    "Live 联调未就绪：需 :8001+:8002，且 copy .env.demo .env 后重启 Copilot（非 standalone/demo_offline）"
+)
 
 
 @pytest.mark.integration
-@pytest.mark.skipif(not _live_stack_up(), reason="RAG :8001 或 Copilot :8002 未启动")
+@pytest.mark.skipif(not _live_stack_up(), reason=_LIVE_SKIP_REASON)
 def test_live_health_engine_and_rag_mode():
     rag = httpx.get(f"{RAG_BASE}/health", timeout=10.0)
     assert rag.status_code == 200
@@ -47,16 +63,12 @@ def test_live_health_engine_and_rag_mode():
 
 
 @pytest.mark.integration
-@pytest.mark.skipif(not _live_stack_up(), reason="RAG :8001 或 Copilot :8002 未启动")
-def test_live_create_run_shortage_waiting_hitl():
+@pytest.mark.skipif(not _live_stack_up(), reason=_LIVE_SKIP_REASON)
+def test_live_p1_playbook_shortage_waiting_hitl():
+    """缺料 HITL 走 playbook + RAG draft → parts，不手传 parts_hints。"""
     resp = httpx.post(
-        f"{COPILOT_BASE}/runs",
+        f"{COPILOT_BASE}/playbooks/p1_xingsha_h103/run",
         headers=TECH,
-        json={
-            "question": "长沙星沙 SY215C H103请报修处理",
-            "parts_hints": ["液压泵总成"],
-            "station": "长沙星沙服务站",
-        },
         timeout=120.0,
     )
     assert resp.status_code == 200
@@ -66,19 +78,17 @@ def test_live_create_run_shortage_waiting_hitl():
     assert body.get("rag_client_mode") == "live"
     assert body.get("rag_offline_mode") is False
     assert "ask" in (body.get("rag_linkage") or [])
+    reasons = " ".join((body.get("hitl") or {}).get("reasons") or [])
+    assert "POL-PARTS-01" in reasons
 
 
 @pytest.mark.integration
-@pytest.mark.skipif(not _live_stack_up(), reason="RAG :8001 或 Copilot :8002 未启动")
-def test_live_low_risk_technician_succeeded():
+@pytest.mark.skipif(not _live_stack_up(), reason=_LIVE_SKIP_REASON)
+def test_live_p1b_playbook_no_shortage_succeeded():
+    """有库存路径走 playbook p1b，不手传 parts_hints。"""
     resp = httpx.post(
-        f"{COPILOT_BASE}/runs",
+        f"{COPILOT_BASE}/playbooks/p1b_no_shortage_ready/run",
         headers=TECH,
-        json={
-            "question": "长沙星沙 SY215C H103请报修处理",
-            "parts_hints": ["液压滤芯"],
-            "station": "长沙星沙服务站",
-        },
         timeout=120.0,
     )
     assert resp.status_code == 200
@@ -86,10 +96,11 @@ def test_live_low_risk_technician_succeeded():
     assert body["status"] == "succeeded"
     assert body.get("work_order_state") == "ready_for_chief"
     assert body.get("rag_client_mode") == "live"
+    assert not (body.get("parts_check") or {}).get("shortage")
 
 
 @pytest.mark.integration
-@pytest.mark.skipif(not _live_stack_up(), reason="RAG :8001 或 Copilot :8002 未启动")
+@pytest.mark.skipif(not _live_stack_up(), reason=_LIVE_SKIP_REASON)
 def test_live_p2_conflict_waits_hitl_not_reject():
     """POL-CONFLICT-02 仅 force_hitl，冲突场景须 waiting_hitl 而非 rejected。"""
     resp = httpx.post(
@@ -108,7 +119,7 @@ def test_live_p2_conflict_waits_hitl_not_reject():
 
 
 @pytest.mark.integration
-@pytest.mark.skipif(not _live_stack_up(), reason="RAG :8001 或 Copilot :8002 未启动")
+@pytest.mark.skipif(not _live_stack_up(), reason=_LIVE_SKIP_REASON)
 def test_live_p8_parts_clerk_conflict_waits_hitl():
     resp = httpx.post(
         f"{COPILOT_BASE}/playbooks/p8_parts_clerk_conflict/run",
@@ -125,7 +136,7 @@ def test_live_p8_parts_clerk_conflict_waits_hitl():
 
 
 @pytest.mark.integration
-@pytest.mark.skipif(not _live_stack_up(), reason="RAG :8001 或 Copilot :8002 未启动")
+@pytest.mark.skipif(not _live_stack_up(), reason=_LIVE_SKIP_REASON)
 def test_live_p4_knowledge_only_succeeded_no_draft():
     resp = httpx.post(
         f"{COPILOT_BASE}/playbooks/p4_manual_only/run",
@@ -142,7 +153,7 @@ def test_live_p4_knowledge_only_succeeded_no_draft():
 
 
 @pytest.mark.integration
-@pytest.mark.skipif(not _live_stack_up(), reason="RAG :8001 或 Copilot :8002 未启动")
+@pytest.mark.skipif(not _live_stack_up(), reason=_LIVE_SKIP_REASON)
 def test_live_oral_off_script_fault_dispatch():
     from app.eval.compare import ORAL_SMOKE_QUESTIONS
 
@@ -160,7 +171,7 @@ def test_live_oral_off_script_fault_dispatch():
 
 
 @pytest.mark.integration
-@pytest.mark.skipif(not _live_stack_up(), reason="RAG :8001 或 Copilot :8002 未启动")
+@pytest.mark.skipif(not _live_stack_up(), reason=_LIVE_SKIP_REASON)
 def test_live_p1_playbook_validation_and_hitl_approve():
     resp = httpx.post(f"{COPILOT_BASE}/playbooks/p1_xingsha_h103/run", headers=TECH, timeout=120.0)
     body = resp.json()
@@ -172,7 +183,13 @@ def test_live_p1_playbook_validation_and_hitl_approve():
     approve = httpx.post(
         f"{COPILOT_BASE}/runs/{run_id}/hitl",
         headers=CHIEF,
-        json={"decision": "approve", "note": "站长确认"},
+        json={
+            "decision": "approve",
+            "note": "站长确认",
+            "confirmations": {
+                layer: True for layer in list((body.get("hitl") or {}).get("pending_layers") or [])
+            },
+        },
         timeout=120.0,
     )
     assert approve.status_code == 200

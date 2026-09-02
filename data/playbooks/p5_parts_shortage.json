@@ -1,6 +1,7 @@
 {
   "title": "P5 缺料路径（液压泵·经开调拨）",
-  "question": "星沙站 SY215C H101 液压泵异响，请报修处理并核对液压泵总成库存",
+  "demo_honesty": "离线回归可用 force parts_hints；主演示优先 P1（draft）+ P1b（有货对照）。",
+  "question": "星沙站 SY215C H103 液压泵异响，请报修处理并核对液压泵总成库存",
   "api_key": "demo-technician",
   "knowledge_base": "demo-kb",
   "auto_submit": false,
@@ -9,5 +10,6 @@
   "expect_intent": "fault_dispatch",
   "expect_trace_prefix": ["supervisor", "rag", "quality", "work_order", "parts", "hitl"],
   "parts_hints": ["液压泵总成"],
-  "expect_hitl_reasons": ["POL-PARTS-01"]
+  "expect_hitl_reasons": ["POL-PARTS-01"],
+  "expect_hints_source": "force_hints"
 }

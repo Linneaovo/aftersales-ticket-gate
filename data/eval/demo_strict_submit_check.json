@@ -1,0 +1,23 @@
+{
+  "schema": "demo_strict_submit_check/v1",
+  "generated_at": "2026-09-01T08:40:04.007262+00:00",
+  "skipped": false,
+  "all_ok": true,
+  "checks": {
+    "red_no_token_403": {
+      "ok": true,
+      "status_code": 403,
+      "body": "{\"detail\":\"业务 submit 需要有效 X-Copilot-Submit-Token（探针 contract_probe 除外）\"}"
+    },
+    "probe_without_token_200": {
+      "ok": true,
+      "status_code": 200
+    },
+    "green_copilot_approve": {
+      "ok": true,
+      "detail": "approve=200 status=succeeded dest=rag_mock_inbox source=copilot_hitl"
+    }
+  },
+  "rag_submit_require_copilot_token": true,
+  "rag_copilot_submit_token_configured": true
+}

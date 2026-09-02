@@ -1,16 +1,45 @@
-# 售后开单协同 Copilot · 架构说明
+# 报修开单门禁 Copilot · 架构说明
 
 ## 1. 系统定位
 
 | 层 | 组件 | 职责 |
 |---|---|---|
-| 展示层 | Streamlit (:8502) | 人设切换、剧本、HITL 按钮、Trace 查看 |
-| 行动层 | FastAPI + LangGraph (:8002) | 编排、Policy 门禁、质检、人确、mock 开单 |
-| 知识层 | enterprise-rag (:8001) | 检索、ACL、工单 draft/submit/inbox、feedback |
-| 推理 | Ollama（RAG 侧） | Copilot 不直连；通过 RAG `/health` 与 answer 降级标记感知 |
+| 展示层 | Streamlit (:8502) | 人设切换、剧本、HITL、本仓 Outbox /（可选）RAG inbox、Trace |
+| 行动层 | FastAPI + LangGraph (:8002) | 编排、POL 门禁、质检、人确、SubmitDestination |
+| 知识源端口 | Fixture **或** enterprise-rag (:8001) | Standalone=契约形 Fixture；Live=HTTP 检索/draft |
+| 推理 | Ollama（仅 Http RAG 侧） | 本仓不直连 LLM |
 
-**Copilot 不做：** 向量库、文档入库、LLM 生成、生产 ERP 派工。  
-**Copilot 做：** Supervisor–Worker 状态机、POL-* 门禁、冲突不作裁决、站长 HITL、配件 JSON 预核。
+**本仓不做：** 向量库、文档入库、本仓 LLM、生产 ERP 派工。  
+**本仓做：** Supervisor–Worker、POL-*、冲突不作裁决、站长 HITL、配件预核、Decision Snapshot、可插拔落箱。  
+**提交终点：** `file_outbox`（Standalone 默认）或 `rag_mock_inbox`（Joint 加分）· `is_production_ticket=false`。  
+入口：[docs/OVERVIEW.md](docs/OVERVIEW.md) · 自立：[docs/STANDALONE_SCOPE.md](docs/STANDALONE_SCOPE.md)。
+
+### 双端口（自立核心）
+
+```text
+┌─────────────────────────────────────────────┐
+│  Copilot 产品面                               │
+│  Intent → POL/Quality → Parts → HITL → Cert │
+│            ↓                                  │
+│  SubmitDestination                            │
+│  • file_outbox（Standalone 主路径）            │
+│  • rag_mock_inbox（Joint 加分）               │
+└─────────────────────────────────────────────┘
+         │ KnowledgePort
+         ├─ Fixture（DEMO_OFFLINE / knowledge_port=fixture）
+         └─ HttpRagAdapter（:8001 · Live 加分）
+```
+
+`/health` 暴露：`runtime_mode` · `knowledge_port` · `submit_destination` · `standalone_scorecard_ok` · `mode_warnings`（错配则 status degraded）。
+
+### 验收分层
+
+| 层 | 含义 |
+|----|------|
+| **Standalone** | 无 `:8001`；`standalone_scorecard` · `preflight --standalone` |
+| pytest FakeRag/Fixture | 离线编排；collect 见 `app/eval/ssot.py`；**≠ Live** |
+| Live / `joint_evidence_pack` | **加分**；须 `live_verified=true` |
+| CI | 不验 :8001；`live-linkage.yml` 默认关 |
 
 ## 2. LangGraph 状态机
 
@@ -32,111 +61,130 @@ START → supervisor ─┬→ rag ───────────────
 |---|---|
 | `raw_input` / `intent` | 用户输入 / 规则分类结果 |
 | `service_ticket` | 机型、故障码、站点、二次进站、SLA |
-| `rag_result` | enterprise-rag `/ask` 响应 |
+| `rag_result` | 知识源 `/ask` 形响应（Fixture 或 Http RAG） |
 | `conflict_bundle` | 冲突束；`policy=no_arbitration` |
-| `critic_report` | 质检结果；`force_hitl` |
+| `critic_report` | 质检结果；`force_hitl`（质检侧，≠ 角色矩阵） |
 | `parts_check` | 本地 JSON 台账预核 |
-| `work_order_draft` / `work_order_submit` | RAG mock 工单 |
-| `hitl` | 人确状态；`decision=approve|reject|edit` |
+| `work_order_draft` / `work_order_submit` | 草稿 / 落箱结果 |
+| `hitl` | 人确；`decision=approve|reject|return` |
 | `submit_eligible` | 提交门禁汇总 |
 | `trace_events` | 节点级 trace |
-| `engine` | langgraph / fallback |
-| `execution_path` | langgraph / fallback（审计用，与 engine_degraded 同看） |
+| `engine` / `execution_path` | langgraph / fallback |
 | `work_order_state` | intake / drafting / pending_chief / submitted |
+| `rag_offline_mode` / public `knowledge_port` | fixture vs http |
 
-状态图类型：**`StateGraph(CopilotState)`**（不可用裸 `dict`，否则 checkpoint 合并会丢字段）。
+状态图类型：**`StateGraph(CopilotState)`**。
+
+### 提交端口（SubmitDestination）
+
+| 实现 | 配置 `SUBMIT_DESTINATION` | 说明 |
+|------|---------------------------|------|
+| `FileOutboxDestination` | `file_outbox`（`.env.standalone`） | 本仓 `data/outbox/{run_id}.json`；`GET /outbox` |
+| `RagMockInboxDestination` | `rag_mock_inbox`（`.env.demo`） | HTTP → RAG mock inbox |
+
+统一字段：`is_production_ticket=false` · `idempotency_key=run_id` · `source=copilot_hitl`。门禁未通过不得调用 destination。
+
+### 治理证据
+
+| 产物 | 入口 |
+|------|------|
+| Standalone 范围 / DoD | `docs/STANDALONE_SCOPE.md` |
+| Standalone Scorecard | `build_governance_scorecard.py --profile standalone` |
+| Full / Joint Scorecard | `build_governance_scorecard.py`（默认 full） |
+| 联合 synergy | `app/eval/synergy_checks.py`（加分 claimable） |
+| 故障三幕 | `scripts/build_joint_failure_drill.py` |
 
 ## 4. 持久化模型
 
-| 存储 | 文件 | 内容 | 用途 |
-|---|---|---|---|
-| Run 快照 | `data/runs.db` | 完整/ slim 状态 JSON | API 查询、HITL 续跑前加载 |
-| HITL checkpoint | `data/checkpoints.db` | LangGraph SqliteSaver | interrupt → resume |
-| Trace | `data/traces/{run_id}.jsonl` | 节点事件流 | 回放、排障 |
+| 存储 | 文件 | 用途 |
+|---|---|---|
+| Run 快照 | `data/runs.db` | API / HITL 续跑前加载 |
+| HITL checkpoint | `data/checkpoints.db` | interrupt → resume |
+| Trace | `data/traces/{run_id}.jsonl` | 回放 |
+| Outbox | `data/outbox/*.json` | Standalone 落箱；reset 一并清理 |
 
-**依赖关系：** HITL resume 需要 **runs.db 有 waiting_hitl 记录** 且 **checkpoints.db 有同 thread_id（=run_id）checkpoint**。  
-**清理：** `python scripts/reset_demo_state.py` 三者一并清除。  
-**cancel：** `POST /runs/{id}/cancel` 标记 cancelled 并删除对应 checkpoint 线程。
+**HITL resume** 需要 runs.db + checkpoints.db 同 `run_id`。  
+**清理：** `python scripts/reset_demo_state.py`（含 outbox）。
 
-**persist_mode：** `slim`（默认）截断 RAG answer/sources、work_order_draft 长文本；`full` 保留完整 payload。api_key 落库一律 `__redacted__`，load 时按 role 还原 demo key。
-
-## 11. 结构化日志
-
-每个 graph 节点经 `_append_trace()` 同时写入 trace JSONL 与 stdout 结构化日志（`copilot.nodes`）：
-
-`run_id=… node=… ok=… latency_ms=… policy_ids=…`
-
-配置入口：`app/logging_config.py`，FastAPI startup 调用 `setup_logging()`。
-
-## 12. 测试分层
-
-| 层级 | 位置 | 引擎 | 说明 |
-|---|---|---|---|
-| Policy/节点 | `tests/test_core.py` | fallback（快速）+ langgraph 抽样 | 与 spotlight 对照 |
-| LangGraph e2e | `tests/test_langgraph_e2e.py` | langgraph | interrupt/resume |
-| 剧本规格 | `tests/test_playbooks.py` | langgraph（7 条） | 与 POST /runs 一致 |
-| HTTP 契约 | `tests/test_api.py` | langgraph via API | TestClient + FakeRag |
-| Live 冒烟 | `tests/test_integration_live.py` | langgraph | `@pytest.mark.integration`，CI 跳过 |
-| 真连 RAG | `scripts/smoke_with_rag.py` | langgraph | 输出 `smoke_report.json` |
+**persist_mode：** `slim`（默认）/ `full`。api_key 落库 `__redacted__`。
 
 ## 5. HITL interrupt / resume 时序
 
 ```text
-1. POST /runs → graph.invoke → supervisor 判定 need_hitl
-2. hitl_node → interrupt(payload) → status=waiting_hitl，写 runs.db + checkpoint
-3. POST /runs/{id}/hitl (demo-chief) → load_run → Command(resume={decision, note})
-4. graph 续跑 → supervisor → submit 或 end
+1. POST /runs → graph.invoke → need_hitl
+2. hitl_node → interrupt → waiting_hitl + checkpoint
+3. POST /runs/{id}/hitl (demo-chief) → Command(resume=…)
+4. supervisor → submit（file_outbox 或 rag_mock_inbox）→ end
 ```
 
 ## 6. 降级路径
 
 | 条件 | 行为 |
 |---|---|
-| RAG `/health` degraded | `POL-DEGRADE-01`；禁 auto_submit；强制人确 |
-| RAG HTTP 失败 | `status=failed` |
-| LangGraph 异常 | runner 自动降级 fallback 并逐步执行 |
-| Ollama 不可用 | RAG answer 含「仅检索/ollama 不可用」→ 质检 force_hitl |
+| Standalone | 不要求 Live；显式 Fixture |
+| RAG `/health` degraded（Live） | POL-DEGRADE-01；禁 auto_submit |
+| Live 下 RAG 不可达 | 503（禁静默 Fixture） |
+| LangGraph 异常 | ENGINE_STRICT 默认失败；容灾须显式关严格 |
 
-## 7. 外部 RAG 接口（只读调用）
+## 7. 外部 RAG 接口（Live 可选）
 
-`/health` · `/knowledge-bases/{kb}/ask` · `retrieve` · `/work-orders/draft|submit|inbox` · `/feedback` · `/metrics`
+`/health` · `/ask` · `retrieve` · `/work-orders/draft|submit|inbox` · `/feedback` · `/metrics`
 
 ## 8. 剧本规格
 
-`data/playbooks/*.json` 为可执行规格，字段：
+`data/playbooks/*.json`：`expect_status` / `expect_hitl_reasons` 等。  
+离线：`tests/test_playbooks.py`；API：`POST /playbooks/{id}/validate`。
 
-- `expect_status` / `expect_intent`
-- `expect_trace_prefix` / `expect_hitl_reasons`
+## 9. Policy-as-Code（主线 5 条）
 
-验证入口：
-
-- 离线：`tests/test_playbooks.py`
-- API：`POST /playbooks/{id}/validate`
-- 真连 RAG：`scripts/smoke_with_rag.py` → `data/eval/smoke_report.json`
-
-## 9. Policy-as-Code（答辩主线 5 条）
-
-| ID | 场景 |
-|---|---|
-| **POL-ROLE-01** | 技师提单须站长人确 |
-| **POL-CONFLICT-01** | 冲突并列不作裁决 |
-| **POL-PARTS-01** | 缺料须人确调拨 |
-| **POL-SLA-01/02** | 二次进站 / 紧急首响 |
-| **POL-DEGRADE-01** | RAG 降级禁 auto_submit |
-
+POL-ROLE-01 · POL-CONFLICT-01 · POL-PARTS-01 · POL-SLA-01 · POL-DEGRADE-01  
 完整目录：`GET /policies` · `app/policy/rules_catalog.py`
 
-## 10. ACL 双层分工（双项目联动）
+## 10. ACL 双层（联调时）
 
-| 层 | 负责方 | 示例 |
-|---|---|---|
-| **L1 Copilot 调度** | 关键词 intent（`acl_probe`） | 「薪酬系数」→ 直接 rejected |
-| **L2 RAG 语料 ACL** | enterprise-rag `/ask` blocked | 返回 `block_reason=acl_denied` → POL-GROUND-02 |
-
-答辩 P3：先展示 L1 拒绝；若问 RAG 侧，说明 L2 在 live 语料拦截。
+| 层 | 负责方 |
+|---|---|
+| L1 Copilot | 关键词 intent（acl_probe） |
+| L2 RAG | `/ask` blocked → POL-GROUND-02 |
 
 ## 11. 意图词表
 
-外置配置：`data/intent_rules.json`  
-加载：`app/domain/intent_rules.py`  
-修改词表后无需改 Python 代码（重启进程生效）。
+`data/intent_rules.json` · `app/domain/intent_rules.py`（重启生效）。
+
+## 12. 结构化日志
+
+每个 graph 节点经 `_append_trace()` 写入 trace JSONL 与 stdout（`copilot.nodes`）：
+
+`run_id=… node=… ok=… latency_ms=… policy_ids=…`
+
+配置：`app/logging_config.py`。
+
+## 13. 测试分层
+
+| 层级 | 位置 | 说明 |
+|---|---|---|
+| Policy/节点 | `tests/test_core.py` | fallback + 抽样 |
+| Standalone | `tests/test_standalone_mode.py` | Fixture + file_outbox · HITL→outbox |
+| LangGraph e2e | `tests/test_langgraph_e2e.py` | interrupt/resume |
+| 剧本 | `tests/test_playbooks.py` | 与 POST /runs 一致 |
+| HTTP | `tests/test_api.py` | TestClient + FakeRag |
+| Live | `tests/test_integration_live.py` | `@pytest.mark.integration`，CI 跳过 |
+| Standalone 验收 | `demo_preflight.py --standalone` | 无 :8001 |
+| Live 验收 | `scripts/live_*.py` | 加分；本机 :8001+:8002 |
+
+## 14. 部署与并发约束（生产化前必读）
+
+| 约束 | 现状 | 生产化方向 |
+|------|------|------------|
+| **Uvicorn worker** | 演示/答辩 **单 worker**（`--workers 1`） | 多 worker 须 Postgres/Redis checkpointer + 共享 runs 存储 |
+| **SQLite** | `runs.db` + `checkpoints.db` 本机文件 | 并发写会锁竞争；Docker 用 named volume 持久化 |
+| **HITL resume** | 同 `run_id` 的 runs 快照 + LangGraph checkpoint 成对 | 丢 checkpoint → `ENGINE_STRICT=1` 下 failed |
+| **Docker** | `docker-compose.yml` Standalone 双服务 | 不含 RAG；联调仍本机 `.env.demo` + :8001 |
+
+```bash
+docker compose up --build -d
+docker compose exec api python scripts/reset_demo_state.py
+docker compose exec api python scripts/demo_preflight.py --standalone
+```
+
+**禁止**在未改 checkpointer 的情况下 `--workers 2+`：SQLite checkpoint 与内存 graph 缓存非跨进程安全。

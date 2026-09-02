@@ -1,0 +1,26 @@
+{
+  "schema": "feedback_roundtrip/v1",
+  "generated_at": "2026-08-30T03:07:36.029649+00:00",
+  "offline": {
+    "mode": "offline_fakerag",
+    "ok": true,
+    "run_id": "f89f61513e4e",
+    "feedback_ref": {
+      "ok": true,
+      "rating": "down",
+      "error": null
+    },
+    "lookup": {
+      "count": 1,
+      "ratings": [
+        "down"
+      ]
+    },
+    "status": "succeeded",
+    "required_for_claimable": false,
+    "note": "advisory：degraded submit → feedback down 可按 run_id 回读；不阻断 scorecard 主路径"
+  },
+  "live": null,
+  "all_ok": true,
+  "required_for_claimable": false
+}

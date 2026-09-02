@@ -48,7 +48,10 @@ def test_parts_cases_from_file():
     for case in _load_cases():
         if case.get("bucket") != "parts":
             continue
-        assert check_parts(case["hints"])["shortage"] is case["expect_shortage"], case["id"]
+        out = check_parts(case["hints"])
+        assert out["shortage"] is case["expect_shortage"], case["id"]
+        if "expect_unknown_parts" in case:
+            assert bool(out.get("unknown_parts")) is case["expect_unknown_parts"], case["id"]
 
 
 def test_hitl_meta_cases_technician_needs_hitl():
@@ -57,10 +60,11 @@ def test_hitl_meta_cases_technician_needs_hitl():
             continue
         if case["id"] != "H01":
             continue
+        # HITL 须 langgraph；fallback 禁止假 waiting_hitl
         state = create_initial_state(
             "SY215C H103请报修处理",
             api_key="demo-technician",
-            engine="fallback",
+            engine="langgraph",
         )
         out = run_until_pause(state, client=FakeRag(), persist=False)  # type: ignore[arg-type]
         assert out["status"] == "waiting_hitl"

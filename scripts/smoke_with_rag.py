@@ -5,7 +5,7 @@
   .\\.venv\\Scripts\\python.exe scripts\\smoke_with_rag.py --engine langgraph
   .\\.venv\\Scripts\\python.exe scripts\\smoke_with_rag.py --compare-live
   .\\.venv\\Scripts\\python.exe scripts\\smoke_with_rag.py --offline
-  .\\.venv\\Scripts\\python.exe scripts\\smoke_with_rag.py --report data/eval/smoke_report.json
+  .\\.venv\\Scripts\\python.exe scripts\\smoke_with_rag.py --report data/local/smoke_report.json
 """
 
 from __future__ import annotations
@@ -32,10 +32,12 @@ DEMO_DOCS = tuple(load_station_profile().get("demo_corpus_hints") or [])
 
 PLAYBOOK_IDS = [
     "p1_xingsha_h103",
+    "p1b_no_shortage_ready",
     "p2_warranty_conflict",
     "p3_acl_salary",
     "p4_manual_only",
     "p5_parts_shortage",
+    "p5b_parts_from_draft",
     "p6_chitchat",
     "p7_second_visit_shortage",
     "p8_parts_clerk_conflict",
@@ -54,8 +56,8 @@ def main() -> int:
     )
     parser.add_argument(
         "--report",
-        default=str(ROOT / "data" / "eval" / "smoke_report.json"),
-        help="structured JSON report path",
+        default=str(ROOT / "data" / "local" / "smoke_report.json"),
+        help="structured JSON report path (local only — not for Portfolio)",
     )
     parser.add_argument(
         "--compare-live",
@@ -65,7 +67,7 @@ def main() -> int:
     parser.add_argument(
         "--offline",
         action="store_true",
-        help="offline baseline with DemoRag (no :8001); for committed smoke_report.json",
+        help="offline baseline with DemoRag (no :8001); local smoke_report.json — not for Portfolio",
     )
     args = parser.parse_args()
 
@@ -228,6 +230,9 @@ def _run_playbook_cases(args: argparse.Namespace, default_client: Any, report: d
                     print("citations ok (demo-kb corpus hint matched)")
                 elif not args.offline:
                     print("WARN: citations 未命中 profile 提示名:", names[:3])
+                from app.policy.hitl_layers import compute_pending_layers, confirmations_covering
+
+                pending = list((out.get("hitl") or {}).get("pending_layers") or []) or compute_pending_layers(out)
                 out2 = apply_hitl(
                     out,
                     "approve",
@@ -235,6 +240,7 @@ def _run_playbook_cases(args: argparse.Namespace, default_client: Any, report: d
                     client=rag_client,
                     persist=not args.offline,
                     approver_api_key="demo-chief",
+                    confirmations=confirmations_covering(pending),
                 )
                 case_report["after_chief_approve"] = {
                     "status": out2.get("status"),

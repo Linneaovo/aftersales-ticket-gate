@@ -1,0 +1,15 @@
+{
+  "title": "P9 浏阳工地 · 泵车渗油报修（非 H103）",
+  "business_background": "浏阳工地泵车支腿油缸渗油；扩展场景，验证非星沙/H103 主路径仍可进报修门禁。",
+  "question": "浏阳工地泵车支腿油缸渗油，请登记报修",
+  "api_key": "demo-technician",
+  "knowledge_base": "demo-kb",
+  "auto_submit": false,
+  "station": "长沙星沙服务站",
+  "second_visit": false,
+  "sla_class": "normal",
+  "parts_hints": ["液压滤芯"],
+  "expect_status": "succeeded",
+  "expect_intent": "fault_dispatch",
+  "expect_trace_prefix": ["supervisor", "rag", "quality", "work_order", "parts"]
+}

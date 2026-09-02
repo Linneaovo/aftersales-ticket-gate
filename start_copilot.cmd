@@ -6,6 +6,9 @@ if not exist .venv (
 call .venv\Scripts\activate.bat
 pip install -r requirements.txt -q
 if exist .env.example if not exist .env copy .env.example .env >nul
+echo.
+echo [NOTE] Live linkage: use start_copilot_live.cmd or copy .env.demo -^> .env
+echo        Standalone: copy .env.standalone .env
 echo Prerequisite: enterprise-rag on :8001 (DEMO_MODE=1, demo-kb)
 echo Optional smoke after both up: python scripts\smoke_with_rag.py
 echo Starting copilot API on :8002 ...

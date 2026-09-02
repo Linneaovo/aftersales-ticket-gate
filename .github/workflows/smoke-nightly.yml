@@ -1,38 +1,20 @@
 name: Smoke (manual / nightly)
 
+# 离线 FakeRag / DemoRag 回归已由 ci.yml 覆盖，本 workflow 不再重复跑 pytest/smoke。
+# Live 真连见 live-linkage.yml（默认 if: false，需 self-hosted）。
+#
+# 保留本文件：workflow_dispatch 入口 + 指向 CI / Live 的说明，避免文档死链。
+
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 18 * * *"
 
 jobs:
-  live-smoke:
+  point-to-ci:
+    name: Offline covered by CI
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install dependencies
+      - name: Redirect
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Offline pytest (baseline)
-        run: python -m pytest -q -m "not integration"
-
-      - name: Live RAG smoke (requires RAG secrets / self-hosted runner)
-        run: |
-          echo "Skip live smoke on GitHub-hosted runner unless RAG endpoint configured"
-          python scripts/smoke_with_rag.py --engine langgraph --compare-live || true
-
-      - name: Upload smoke report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: smoke-report
-          path: data/eval/smoke_report.json
-          if-no-files-found: ignore
+          echo "Offline orchestration (pytest FakeRag + smoke_with_rag --offline) runs in ci.yml on push/PR."
+          echo "Live HTTP linkage: see live-linkage.yml (disabled on GitHub-hosted by default)."
+          echo "Local evidence: scripts/live_integration_manual.py + live_function_test.py → data/eval/live_*.json"

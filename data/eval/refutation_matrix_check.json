@@ -1,0 +1,8 @@
+{
+  "schema": "refutation_matrix_check/v1",
+  "all_ok": true,
+  "errors": [],
+  "parts_gate_ab_all_ok": true,
+  "align_ok": true,
+  "acl_matrix_ok": true
+}

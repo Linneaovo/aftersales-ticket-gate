@@ -1,0 +1,94 @@
+{
+  "schema": "joint_failure_drill/v2",
+  "generated_at": "2026-09-01T08:40:03.319027+00:00",
+  "all_ok": true,
+  "scenes": [
+    {
+      "id": "rag_unreachable",
+      "title": "RAG 不可达时不得静默开跑",
+      "expected": "live 模式下 POST /runs → 503；rag_mode 诚实",
+      "config_live_linkage_required": true,
+      "rag_auto_fallback": false,
+      "demo_offline": false,
+      "env_demo_require_live": "1",
+      "env_demo_block_runs": "1",
+      "ok": true,
+      "manual": true,
+      "evidence": ".env.demo + app.config / rehearse_rag_failure",
+      "manual_steps": [
+        "1. 停 enterprise-rag :8001",
+        "2. python scripts/build_joint_failure_drill.py --probe-live",
+        "3. 期望 probe_runs_status=503 且 probe_ok=true"
+      ],
+      "probe_note": "未 --probe-live：仅 .env.demo 配置断言；503 须人工停 RAG 后探测"
+    },
+    {
+      "id": "rag_degraded",
+      "title": "RAG degraded 禁 auto_submit 直提",
+      "expected": "evaluate_submit_eligible → not eligible + POL-DEGRADE-01",
+      "eligible": false,
+      "blockers": [
+        "[POL-HITL-WAIT] 等待站长人确: 质检要求人确",
+        "[POL-DEGRADE-01] RAG 降级时强制人确并禁止自动提交: 须 confirmations.degrade=true",
+        "[POL-ROLE-01] 非站长不可直接 submit，须站长人确批准: role=technician"
+      ],
+      "ok": true,
+      "manual": false,
+      "evidence": "app.policy.gates.evaluate_submit_eligible",
+      "policy_ids": [
+        "POL-DEGRADE-01"
+      ]
+    },
+    {
+      "id": "no_silent_demorag",
+      "title": "禁止静默 DemoRag 冒充联调",
+      "expected": "RAG_AUTO_FALLBACK=0 且 DEMO_OFFLINE=0（演示档 .env.demo）",
+      "rag_auto_fallback": false,
+      "demo_offline": false,
+      "env_demo_line": "RAG_AUTO_FALLBACK=0",
+      "env_demo_offline_line": "DEMO_OFFLINE=0",
+      "ok": true,
+      "manual": false,
+      "evidence": ".env.demo (演示档 SSOT)",
+      "advisory_ok_if_dev_fallback": true
+    },
+    {
+      "id": "retrieve_only_forces_hitl",
+      "title": "retrieve_only → HITL，不得直提",
+      "expected": "waiting_hitl + POL-DEGRADE-01；无 work_order_submit",
+      "status": "waiting_hitl",
+      "policy_ids": [
+        "POL-DEGRADE-01"
+      ],
+      "submit_present": false,
+      "ok": true,
+      "manual": false,
+      "evidence": "FakeRag retrieve_only + run_until_pause"
+    },
+    {
+      "id": "low_grounding_no_silent_submit",
+      "title": "低 grounding 不得静默落箱",
+      "expected": "status∈{rejected,waiting_hitl,failed} 且无成功 submit",
+      "status": "rejected",
+      "submit_present": false,
+      "ok": true,
+      "manual": false,
+      "evidence": "FakeRag grounded=false + run_until_pause"
+    },
+    {
+      "id": "probe_lane_isolation",
+      "title": "探针 submit 不得进业务 lane",
+      "expected": "demo_strict_submit：无 token 业务 403；probe 200；绿路径 inbox",
+      "ok": true,
+      "manual": false,
+      "source": "data/eval/demo_strict_submit_check.json",
+      "evidence": "scripts/demo_strict_submit_check.py"
+    }
+  ],
+  "aligned_with": [
+    "PLAN_B.md",
+    "scripts/rehearse_rag_failure.py",
+    "B4 hardening"
+  ],
+  "note": "自动幕：degrade/retrieve_only/低 grounding/禁静默/probe lane；503 须人工停 RAG + --probe-live，报告 manual=true，禁止假绿"
+}

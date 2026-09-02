@@ -1,4 +1,5 @@
 {
+  "_doc": "现场口语词表（派人/上门等）仅用于识别报修意图；产品不做 ERP 派工。演示口语见 ORAL_SMOKE。枚举 fault_dispatch=历史名，口头说报修开单。",
   "dispatch_tokens": ["派人", "赶紧派", "派师傅", "派个师傅", "安排派人", "转台卡滞", "卡滞", "转台", "泵车", "卡死", "报修", "开单"],
   "weak_action_tokens": [
     "看看",
@@ -20,17 +21,21 @@
     "排查一下",
     "报个修",
     "接一下",
-    "安排人"
-  ],
-  "knowledge_query_tokens": [
-    "第几章",
-    "是什么意思",
-    "什么意思",
-    "怎么理解",
-    "是什么",
-    "定义",
-    "含义",
-    "对照表"
+    "安排人",
+    "催得紧",
+    "催一下",
+    "赶紧处理",
+    "帮忙处理",
+    "来人",
+    "修一下",
+    "修一下呗",
+    "登记一下",
+    "管不管",
+    "咋整",
+    "快点",
+    "有没有空",
+    "帮开单",
+    "帮登记"
   ],
   "action_tokens": [
     "报修",
@@ -50,7 +55,8 @@
     "上门看看",
     "上门排查",
     "先安排",
-    "来看看吧"
+    "来看看吧",
+    "派人"
   ],
   "fault_symptom_tokens": [
     "大臂抬不起来",
@@ -60,6 +66,8 @@
     "无力",
     "异响",
     "抬不起来",
+    "抬不起",
+    "抬不动",
     "没劲",
     "响得厉害",
     "响得凶",
@@ -71,6 +79,10 @@
     "动作慢",
     "抬升缓慢",
     "抬不高",
+    "抬臂慢",
+    "抬臂缓慢",
+    "动臂慢",
+    "大臂慢",
     "没故障码",
     "没有故障码",
     "没码",
@@ -81,16 +93,146 @@
     "沉降",
     "卡顿",
     "漏油",
+    "渗油",
     "有问题",
-    "出问题了"
+    "出问题了",
+    "没动作",
+    "不对劲",
+    "瘫了",
+    "瘫工地",
+    "趴窝",
+    "又跳了",
+    "老样子"
   ],
-  "chat_tokens": ["你好", "讲个笑话", "天气", "你是谁", "今天吃什么"],
-  "injection_tokens": ["忽略以上", "忽略之前", "jailbreak", "系统提示", "prompt injection"],
-  "acl_probe_tokens": ["薪酬", "工资", "合同金额", "采购合同", "保密制度"],
-  "conflict_tokens": ["质保", "质保期", "哪个为准", "新旧制度", "冲突", "不一致"],
-  "second_visit_tokens": ["二次进站", "再次上门", "再上门", "重复进站", "二次上门"],
+  "chat_tokens": ["你好", "讲个笑话", "天气", "你是谁", "今天吃什么", "哈喽", "外卖", "几岁", "唱首歌", "在吗"],
+  "injection_tokens": ["忽略以上", "忽略之前", "jailbreak", "系统提示", "prompt injection", "绕过限制", "hidden prompt", "开发者模式"],
+  "acl_probe_tokens": ["薪酬", "工资", "合同金额", "采购合同", "保密制度", "年终奖", "合同价款"],
+  "conflict_tokens": ["质保", "质保期", "哪个为准", "新旧制度", "冲突", "不一致", "打架", "听谁的", "对不上", "互相矛盾"],
+  "second_visit_tokens": ["二次进站", "再次上门", "再上门", "重复进站", "二次上门", "二进宫"],
+  "knowledge_query_tokens": [
+    "第几章",
+    "是什么意思",
+    "什么意思",
+    "怎么理解",
+    "是什么",
+    "定义",
+    "含义",
+    "对照表",
+    "码表",
+    "怎么解释",
+    "写在哪"
+  ],
   "urgent_tokens": ["紧急", "抢修", "停机", "无法作业", "首响"],
   "warranty_tokens": ["在保", "质保内", "过保", "质保期"],
-  "model_pattern": "\\b(SY215C?|SR155|SY215)\\b",
-  "fault_code_pattern": "(?<![A-Za-z0-9])([EHC]\\d{3})(?!\\d)"
+  "model_pattern": "\\b(SY215C?|SR155|SY215|SWM220)\\b",
+  "fault_code_pattern": "(?<![A-Za-z0-9])([EHC]\\d{3})(?!\\d)",
+  "intent_confidence_threshold": 0.5,
+  "fault_dispatch_score_weights": {
+    "_doc": "启发式信号加权（非校准概率）。confidence=各信号权重之和 capped 1.0，仅作 POL-INTENT-01 低置信强制人确触发器；改权重后请跑 scripts/intent_weight_sensitivity.py。",
+    "fault_code": 0.35,
+    "model": 0.25,
+    "action": 0.25,
+    "symptom": 0.15,
+    "dispatch_token": 0.10,
+    "weak_action": 0.10,
+    "intake_phrase": 0.15,
+    "station_or_jobsite": 0.08,
+    "intake_phrase_any": ["报修", "开单"]
+  },
+  "equipment_context_tokens": [
+    "泵车", "挖机", "起重机", "履带", "转台", "动臂", "大臂", "液压", "车子", "抬臂", "机子", "胳膊", "斗杆", "设备"
+  ],
+  "fault_phrase_tokens": ["有问题", "出问题了", "催得紧", "抬臂慢", "动作慢"],
+  "master_visit_tokens": ["过来", "上门", "一趟", "看看"],
+  "help_appeal_tokens": ["你们", "帮忙"],
+  "master_mention_tokens": ["师傅"],
+  "intent_priority_rules": [
+    {"rule_id": "INJ-01", "intent": "injection", "match": "injection_tokens", "confidence": 1.0, "signal": "injection"},
+    {"rule_id": "CHAT-01", "intent": "chitchat", "match": "chat_tokens", "confidence": 1.0, "signal": "chitchat"},
+    {"rule_id": "ACL-01", "intent": "acl_probe", "match": "acl_probe_tokens", "confidence": 1.0, "signal": "acl_probe"}
+  ],
+  "fault_dispatch_rules": [
+    {
+      "rule_id": "FD-01",
+      "note": "故障码 + 动作/症状/派工弱信号",
+      "all": ["codes"],
+      "any": ["has_action", "has_symptom", "has_dispatch", "has_weak_action"]
+    },
+    {
+      "rule_id": "FD-02",
+      "note": "机型 + 动作/症状/派工弱信号",
+      "all": ["has_model"],
+      "any": ["has_action", "has_symptom", "has_dispatch", "has_weak_action"]
+    },
+    {
+      "rule_id": "FD-03",
+      "note": "强动作 + 症状",
+      "all": ["has_action", "has_symptom"]
+    },
+    {
+      "rule_id": "FD-04",
+      "note": "症状 + 弱动作/派工/求助语气",
+      "all": ["has_symptom"],
+      "any": ["has_weak_action", "has_dispatch", "has_help_appeal"]
+    },
+    {
+      "rule_id": "FD-05",
+      "note": "派工词 + 设备语境",
+      "all": ["has_dispatch", "has_equipment_ctx"]
+    },
+    {
+      "rule_id": "FD-06",
+      "note": "师傅 + 上门/过来类",
+      "all": ["has_master_mention", "has_master_visit"]
+    },
+    {
+      "rule_id": "FD-07",
+      "note": "设备语境 + 故障短语 + 弱动作/求助/站工地",
+      "all": ["has_equipment_ctx", "has_fault_phrase"],
+      "any": ["has_weak_action", "has_help_appeal", "has_geo_ctx"]
+    },
+    {
+      "rule_id": "FD-08",
+      "note": "症状 + 站/工地/客户语境",
+      "all": ["has_symptom", "has_geo_ctx"]
+    },
+    {
+      "rule_id": "FD-09",
+      "note": "设备语境 + 弱动作口语",
+      "all": ["has_equipment_ctx", "has_weak_action"]
+    },
+    {
+      "rule_id": "FD-10",
+      "note": "症状 + 设备指称词",
+      "all": ["has_symptom", "has_equipment_token"]
+    },
+    {
+      "rule_id": "FD-11",
+      "note": "故障码 + 症状",
+      "all": ["codes", "has_symptom"]
+    }
+  ],
+  "post_fault_rules": [
+    {
+      "rule_id": "KO-01",
+      "intent": "knowledge_only",
+      "match": "knowledge_query_tokens",
+      "exclude_any": ["哪个为准", "不一致", "冲突", "新旧制度"],
+      "confidence": 1.0,
+      "signal": "knowledge_query"
+    },
+    {
+      "rule_id": "CR-01",
+      "intent": "conflict_review",
+      "match": "conflict_tokens",
+      "confidence": 1.0,
+      "signal": "conflict"
+    }
+  ],
+  "fallback_rule": {
+    "rule_id": "KO-FALLBACK",
+    "intent": "knowledge_only",
+    "confidence": 0.6,
+    "signal": "fallback_knowledge"
+  }
 }

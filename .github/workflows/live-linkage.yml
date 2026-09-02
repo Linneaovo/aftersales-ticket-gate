@@ -1,0 +1,59 @@
+name: Live linkage L2 (self-hosted)
+
+# L2 真 HTTP 联调（enterprise-rag + Ollama）。GitHub-hosted 无 GPU/Ollama，故默认不跑。
+# L1 默认可复现联调见 linkage-l1.yml（契约桩，无模型）。
+#
+# 对外口径：
+#   - test_live_contract = 校验证据包 JSON schema（≠ HTTP Live）
+#   - linkage-l1.yml = L1 Compose 契约联调（默认可复现）
+#   - 本 workflow = L2 self-hosted / workflow_dispatch 真连骨架
+#
+# 启用方式（有常驻 runner + 真 :8001/:8002 时）：
+#   1) Settings → Actions → runners 注册 self-hosted
+#   2) 本机常驻 enterprise-rag :8001 + Copilot :8002（.env.demo）
+#   3) workflow_dispatch 手动触发；或将 if 改为 true
+# 无 runner 时保持 if: false — 开了却红比不开更糟。禁止用快照冒充 L2。
+
+on:
+  workflow_dispatch:  # 有 runner 时优先手动触发真连
+  schedule:
+    - cron: "0 2 * * *"  # 可选夜间；无 runner 时会被 if 跳过
+
+jobs:
+  live-linkage:
+    name: Live RAG+Copilot scripts
+    # 有 self-hosted runner 时改为: true；默认承认「本机契约」
+    if: false
+    runs-on: [self-hosted]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Preflight (require live RAG)
+        run: python scripts/demo_preflight.py --require-rag --smoke-run
+
+      - name: Live integration manual
+        run: python scripts/live_integration_manual.py
+
+      - name: Live function test
+        run: python scripts/live_function_test.py
+
+      - name: Upload live eval JSON
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-eval-json
+          path: |
+            data/eval/live_integration_manual.json
+            data/eval/live_function_test.json
+          if-no-files-found: warn

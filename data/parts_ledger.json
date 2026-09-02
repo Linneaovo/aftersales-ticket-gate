@@ -1,16 +1,39 @@
 {
+  "_demo_note": "演示台账（WMS 风格字段）。缺料件 stock=0 用于 POL-PARTS-01 对照；改 stock>0 可翻转门禁。详见 data/SYNTHETIC_DATA_PROVENANCE.md。",
   "station": "长沙星沙服务站",
   "support_depot": "经开备件周转点",
-  "depot_phone": "0731-8888-5600",
+  "depot_phone": "000-DEMO-5600",
+  "depot_phone_note": "虚构演示热线，非任何真实服务站号码",
   "default_lead_time_hours": 4,
+  "aliases": {
+    "泵总成": "液压泵总成",
+    "液压泵": "液压泵总成",
+    "电磁阀": "主控电磁阀",
+    "主控阀": "主控阀组",
+    "滤芯": "液压滤芯",
+    "液压油": "液压油46号",
+    "油缸密封": "油缸密封件",
+    "先导阀": "先导控制阀",
+    "回转马达": "回转马达总成",
+    "比例阀芯": "主泵比例阀芯",
+    "主泵比例阀": "主泵比例阀芯",
+    "先导滤芯": "先导滤芯"
+  },
   "items": [
     {
       "part_no": "HY-SV-215",
       "name": "主控电磁阀",
       "stock": 2,
       "depot": "星沙",
-      "machine_models": ["SY215C", "SY215"],
-      "lead_time_hours": 0
+      "machine_models": [
+        "SY215C",
+        "SY215"
+      ],
+      "lead_time_hours": 0,
+      "uom": "EA",
+      "warehouse_code": "WH-XS-01",
+      "bin_location": "A-01-01",
+      "qty_available": 2
     },
     {
       "part_no": "HY-PUMP-08",
@@ -18,24 +41,119 @@
       "stock": 0,
       "depot": "星沙",
       "alt_depot": "经开",
+      "machine_models": [
+        "SY215C",
+        "SY215"
+      ],
+      "lead_time_hours": 4,
+      "uom": "EA",
+      "warehouse_code": "WH-XS-01",
+      "bin_location": "A-02-03",
+      "qty_available": 0
+    },
+    {
+      "part_no": "60277011",
+      "name": "主泵比例阀芯",
+      "stock": 0,
+      "depot": "星沙",
+      "alt_depot": "经开",
       "machine_models": ["SY215C", "SY215"],
-      "lead_time_hours": 4
+      "lead_time_hours": 4,
+      "uom": "EA",
+      "warehouse_code": "WH-XS-01",
+      "bin_location": "A-02-11",
+      "qty_available": 0,
+      "_demo_note": "Live RAG H103 推荐件；stock=0 → POL-PARTS-01"
+    },
+    {
+      "part_no": "60212345",
+      "name": "先导滤芯",
+      "stock": 6,
+      "depot": "星沙",
+      "machine_models": ["SY215C", "SY215"],
+      "lead_time_hours": 0,
+      "uom": "EA",
+      "warehouse_code": "WH-XS-01",
+      "bin_location": "B-02-01",
+      "qty_available": 6
+    },
+    {
+      "part_no": "60212001",
+      "name": "吸油滤芯",
+      "stock": 8,
+      "depot": "星沙",
+      "machine_models": ["SY215C", "SY215"],
+      "lead_time_hours": 0,
+      "uom": "EA",
+      "warehouse_code": "WH-XS-01",
+      "bin_location": "B-02-02",
+      "qty_available": 8
+    },
+    {
+      "part_no": "60288102",
+      "name": "行走马达密封组件",
+      "stock": 3,
+      "depot": "星沙",
+      "machine_models": ["SY215C", "SY215"],
+      "lead_time_hours": 0,
+      "uom": "EA",
+      "warehouse_code": "WH-XS-01",
+      "bin_location": "C-01-01",
+      "qty_available": 3
+    },
+    {
+      "part_no": "60330018",
+      "name": "座椅开关组件",
+      "stock": 4,
+      "depot": "星沙",
+      "machine_models": ["SY215C", "SY215", "SR155"],
+      "lead_time_hours": 0,
+      "uom": "EA",
+      "warehouse_code": "WH-XS-01",
+      "bin_location": "C-01-02",
+      "qty_available": 4
+    },
+    {
+      "part_no": "60455021",
+      "name": "回转溢流阀芯",
+      "stock": 2,
+      "depot": "星沙",
+      "machine_models": ["SY215C", "SY215"],
+      "lead_time_hours": 0,
+      "uom": "EA",
+      "warehouse_code": "WH-XS-01",
+      "bin_location": "C-01-03",
+      "qty_available": 2
     },
     {
       "part_no": "FLT-HY-01",
       "name": "液压滤芯",
       "stock": 12,
       "depot": "星沙",
-      "machine_models": ["SY215C", "SY215", "SR155"],
-      "lead_time_hours": 0
+      "machine_models": [
+        "SY215C",
+        "SY215",
+        "SR155"
+      ],
+      "lead_time_hours": 0,
+      "uom": "EA",
+      "warehouse_code": "WH-XS-01",
+      "bin_location": "B-01-02",
+      "qty_available": 12
     },
     {
       "part_no": "SEAL-KIT-3",
       "name": "密封圈",
       "stock": 20,
       "depot": "星沙",
-      "machine_models": ["SY215C"],
-      "lead_time_hours": 0
+      "machine_models": [
+        "SY215C"
+      ],
+      "lead_time_hours": 0,
+      "uom": "EA",
+      "warehouse_code": "WH-XS-01",
+      "bin_location": "C-03-01",
+      "qty_available": 20
     },
     {
       "part_no": "SEN-P-22",
@@ -43,8 +161,156 @@
       "stock": 0,
       "depot": "星沙",
       "alt_depot": "经开",
-      "machine_models": ["SY215C"],
-      "lead_time_hours": 4
+      "machine_models": [
+        "SY215C"
+      ],
+      "lead_time_hours": 4,
+      "uom": "EA",
+      "warehouse_code": "WH-XS-01",
+      "bin_location": "A-04-02",
+      "qty_available": 0
+    },
+    {
+      "part_no": "SLW-BRG-09",
+      "name": "回转支承",
+      "stock": 1,
+      "depot": "星沙",
+      "machine_models": [
+        "SY215C",
+        "SY215"
+      ],
+      "lead_time_hours": 0,
+      "uom": "EA",
+      "warehouse_code": "WH-XS-01",
+      "bin_location": "D-01-01",
+      "qty_available": 1
+    },
+    {
+      "part_no": "WLK-MTR-03",
+      "name": "行走马达",
+      "stock": 0,
+      "depot": "星沙",
+      "alt_depot": "经开",
+      "machine_models": [
+        "SY215C"
+      ],
+      "lead_time_hours": 6,
+      "uom": "EA",
+      "warehouse_code": "WH-XS-01",
+      "bin_location": "D-02-01",
+      "qty_available": 0
+    },
+    {
+      "part_no": "CYL-SEAL-11",
+      "name": "油缸密封件",
+      "stock": 8,
+      "depot": "星沙",
+      "machine_models": [
+        "SY215C",
+        "SY215"
+      ],
+      "lead_time_hours": 0,
+      "uom": "EA",
+      "warehouse_code": "WH-XS-01",
+      "bin_location": "C-02-04",
+      "qty_available": 8
+    },
+    {
+      "part_no": "HY-OIL-46",
+      "name": "液压油46号",
+      "stock": 40,
+      "depot": "星沙",
+      "machine_models": [
+        "SY215C",
+        "SY215",
+        "SR155"
+      ],
+      "lead_time_hours": 0,
+      "uom": "EA",
+      "warehouse_code": "WH-XS-01",
+      "bin_location": "E-01-01",
+      "qty_available": 40
+    },
+    {
+      "part_no": "CTRL-BOX-02",
+      "name": "主控阀组",
+      "stock": 0,
+      "depot": "星沙",
+      "alt_depot": "经开",
+      "machine_models": [
+        "SY215C"
+      ],
+      "lead_time_hours": 8,
+      "uom": "EA",
+      "warehouse_code": "WH-XS-01",
+      "bin_location": "A-02-01",
+      "qty_available": 0
+    },
+    {
+      "part_no": "PIL-VLV-07",
+      "name": "先导控制阀",
+      "stock": 3,
+      "depot": "星沙",
+      "machine_models": [
+        "SY215C",
+        "SY215"
+      ],
+      "lead_time_hours": 0,
+      "uom": "EA",
+      "warehouse_code": "WH-XS-01",
+      "bin_location": "A-03-02",
+      "qty_available": 3
+    },
+    {
+      "part_no": "SWG-MTR-12",
+      "name": "回转马达总成",
+      "stock": 0,
+      "depot": "星沙",
+      "alt_depot": "经开",
+      "machine_models": [
+        "SY215C"
+      ],
+      "lead_time_hours": 6,
+      "uom": "EA",
+      "warehouse_code": "WH-XS-01",
+      "bin_location": "D-02-03",
+      "qty_available": 0
+    },
+    {
+      "part_no": "ACCU-N2-05",
+      "name": "蓄能器氮气瓶",
+      "stock": 2,
+      "depot": "星沙",
+      "machine_models": [
+        "SY215C",
+        "SY215"
+      ],
+      "lead_time_hours": 0,
+      "uom": "EA",
+      "warehouse_code": "WH-XS-01",
+      "bin_location": "E-02-01",
+      "qty_available": 2
+    },
+    {
+      "part_no": "HOSE-HY-34",
+      "name": "高压胶管总成",
+      "stock": 6,
+      "depot": "星沙",
+      "machine_models": [
+        "SY215C",
+        "SY215",
+        "SR155"
+      ],
+      "lead_time_hours": 0,
+      "uom": "EA",
+      "warehouse_code": "WH-XS-01",
+      "bin_location": "B-03-01",
+      "qty_available": 6
     }
-  ]
+  ],
+  "schema": "demo_parts_ledger/v2",
+  "authority": "demo_json_not_production_wms",
+  "warehouse_code": "WH-XS-01",
+  "last_synced_at": "2026-08-28T12:00:00+08:00",
+  "sync_note": "静态演示同步戳；非实时接口"
 }

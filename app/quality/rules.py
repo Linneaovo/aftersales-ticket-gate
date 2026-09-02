@@ -10,18 +10,23 @@ SINGLE_VERDICT_RE = re.compile(
     r"(以.{0,8}为准|应采用|最终结论是|废除旧版|旧版作废|请按新版执行且忽略旧版|建议以新版为准|应以修订稿为准)"
 )
 RETRIEVE_ONLY_MARKERS = ("仅检索", "检索摘要", "ollama 不可用", "生成降级", "retrieve_only")
+# RAG 安全类 block 仍硬拒；ungrounded 在冲突题下降级为 force_hitl（对齐 live enterprise-rag）
+_HARD_BLOCK_REASONS = frozenset({"acl_denied", "chitchat", "prompt_injection"})
+_GROUNDING_BLOCK_REASONS = frozenset({"ungrounded", "blocked", ""})
 
 
 def detect_rag_degraded(rag: dict[str, Any]) -> bool:
     answer = str(rag.get("answer") or "")
     debug = rag.get("debug") or {}
+    if rag.get("contract_gate_incomplete") or rag.get("_contract_errors"):
+        return True
     if rag.get("retrieve_only") or debug.get("retrieve_only"):
         return True
     return any(m in answer for m in RETRIEVE_ONLY_MARKERS)
 
 
 def run_quality_checks(state: dict[str, Any]) -> CriticReport:
-    """质检：规则为主，消费 RAG 字段；reasons 带策略 ID。"""
+    """规则质检（非 LLM Critic）：消费 RAG grounded/blocked/conflicts 等字段，reasons 带策略 ID。"""
     reasons: list[str] = []
     policy_ids: list[str] = []
     risk: str = "low"
@@ -44,11 +49,6 @@ def run_quality_checks(state: dict[str, Any]) -> CriticReport:
         reasons.append(tag("POL-DEGRADE-01"))
         policy_ids.append("POL-DEGRADE-01")
 
-    if blocked or block_reason in {"acl_denied", "chitchat", "prompt_injection"}:
-        reasons.append(tag("POL-GROUND-02", str(block_reason or "blocked")))
-        policy_ids.append("POL-GROUND-02")
-        risk = "high"
-
     conflict_present = bool(
         conflicts
         or (state.get("conflict_bundle") or {}).get("present")
@@ -56,6 +56,21 @@ def run_quality_checks(state: dict[str, Any]) -> CriticReport:
     )
     # 冲突题：依据不足仍须站长人确（软门禁），不可硬拒抢走 HITL
     soft_ground_on_conflict = conflict_present
+
+    br = str(block_reason or "").strip().lower()
+    if br in _HARD_BLOCK_REASONS:
+        reasons.append(tag("POL-GROUND-02", br))
+        policy_ids.append("POL-GROUND-02")
+        risk = "high"
+    elif blocked and soft_ground_on_conflict and br in _GROUNDING_BLOCK_REASONS:
+        reasons.append(tag("POL-GROUND-01", f"blocked:{br or 'ungrounded'}"))
+        policy_ids.append("POL-GROUND-01")
+        risk = "high"
+        force_hitl = True
+    elif blocked:
+        reasons.append(tag("POL-GROUND-02", str(block_reason or "blocked")))
+        policy_ids.append("POL-GROUND-02")
+        risk = "high"
 
     if intent in {"fault_dispatch", "knowledge_only", "conflict_review"}:
         if not blocked and grounded is False and grounding_score < 0.35:
@@ -107,6 +122,13 @@ def run_quality_checks(state: dict[str, Any]) -> CriticReport:
         if risk == "low":
             risk = "medium"
         policy_ids.append("POL-PARTS-01")
+    if parts.get("model_mismatch") or parts.get("unknown_parts") or parts.get("ledger_degraded"):
+        force_hitl = True
+        if risk == "low":
+            risk = "medium"
+        if "POL-PARTS-02" not in policy_ids:
+            policy_ids.append("POL-PARTS-02")
+            reasons.append(tag("POL-PARTS-02", str(parts.get("note") or "")))
 
     # POL-CONFLICT-02 / 冲突题 POL-GROUND-01：仅 force_hitl，不作硬拒
     hard = [

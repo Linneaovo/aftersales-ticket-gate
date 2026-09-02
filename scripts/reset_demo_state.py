@@ -15,10 +15,12 @@ sys.path.insert(0, str(ROOT))
 
 
 def main() -> int:
-    from app.tracing.store import repair_persistence, reset_all_persistence
+    # 避免 scripts 入口经 app.tracing.__init__ → graph → store 的环状导入
+    import importlib
 
-    report = reset_all_persistence()
-    repair = repair_persistence(dry_run=False)
+    store = importlib.import_module("app.tracing.store")
+    report = store.reset_all_persistence()
+    repair = store.repair_persistence(dry_run=False)
     print(json.dumps({"ok": True, **report, "repair": repair}, ensure_ascii=False, indent=2))
     print("Demo state reset complete.")
     return 0

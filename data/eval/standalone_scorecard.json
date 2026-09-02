@@ -1,0 +1,172 @@
+{
+  "schema": "standalone_scorecard/v1",
+  "profile": "standalone",
+  "generated_at": "2026-08-31T08:55:28.234055+00:00",
+  "git_sha": "bbdb43c",
+  "app_version": "0.2.19-demo",
+  "all_ok": true,
+  "metrics": [
+    {
+      "name": "hitl_gate_agreement",
+      "ok": true,
+      "value": {
+        "mode": "offline_goldset",
+        "n_cases": 27,
+        "n_should_hitl": 15,
+        "n_should_not_hitl": 12,
+        "should_hitl_recall": 1.0,
+        "false_hitl_rate": 0.0,
+        "leak_submit_count": 0,
+        "metric_kind": "offline_goldset",
+        "note": "offline_goldset_not_production_precision"
+      },
+      "source": "data/eval/hitl_gate_report.json",
+      "detail": "n=27 recall=1.0 false_hitl_rate=0.0 leak=0 (thresholds recall>=0.92 false<=0.08 n>=25)",
+      "required": true
+    },
+    {
+      "name": "parts_gate_ab_ok",
+      "ok": true,
+      "value": {
+        "offline_all_ok": true,
+        "live_present": false,
+        "live_all_ok": false,
+        "live_is_bonus_only": true,
+        "parts_file_all_ok": true
+      },
+      "source": "data/eval/parts_gate_ab.json (+ joint nested)",
+      "detail": "offline required; live bonus",
+      "required": true
+    },
+    {
+      "name": "degrade_blocks_auto_submit",
+      "ok": true,
+      "value": {
+        "eligible": false,
+        "blockers": [
+          "[POL-DEGRADE-01] RAG 降级时强制人确并禁止自动提交: 须 confirmations.degrade=true",
+          "[POL-ROLE-01] 非站长不可直接 submit，须站长人确批准: role=technician"
+        ],
+        "degrade_tagged": true
+      },
+      "source": "app.policy.gates.evaluate_submit_eligible (in-process)",
+      "detail": "auto_submit=True + rag_degraded 必须不可直接 submit",
+      "required": true
+    },
+    {
+      "name": "core_policy_evidence_coverage",
+      "ok": true,
+      "value": {
+        "covered": {
+          "POL-ROLE-01": [
+            "p10_wangcheng_shortage",
+            "p1_xingsha_h103",
+            "p2_warranty_conflict",
+            "p5_parts_shortage",
+            "p5b_parts_from_draft",
+            "p7_second_visit_shortage"
+          ],
+          "POL-CONFLICT-01": [
+            "p2_warranty_conflict",
+            "p8_parts_clerk_conflict"
+          ],
+          "POL-PARTS-01": [
+            "p10_wangcheng_shortage",
+            "p1_xingsha_h103",
+            "p5_parts_shortage",
+            "p5b_parts_from_draft",
+            "p7_second_visit_shortage"
+          ],
+          "POL-SLA-01": [
+            "p7_second_visit_shortage"
+          ],
+          "POL-DEGRADE-01": [
+            "drill:rag_unreachable",
+            "drill:rag_degraded",
+            "drill:no_silent_demorag"
+          ]
+        },
+        "missing": []
+      },
+      "source": "data/playbooks + drill|in-process degrade",
+      "detail": "",
+      "required": true
+    },
+    {
+      "name": "file_outbox_port_ok",
+      "ok": true,
+      "value": {
+        "ticket_id": "file-standalone-scorecard-probe",
+        "list_n": 1
+      },
+      "source": "FileOutboxDestination (in-process)",
+      "detail": "file_outbox write/list/idempotent",
+      "required": true
+    },
+    {
+      "name": "intent_held_out",
+      "ok": true,
+      "value": {
+        "held_out_accuracy": 1.0,
+        "n_cases": 45,
+        "min_held_out_accuracy": 0.75,
+        "failure_top": [],
+        "low_confidence_rate": 0.1778,
+        "note": "rule baseline; held_out is professionalism signal"
+      },
+      "source": "data/eval/intent_eval_report.json",
+      "detail": "held_out acc=1.0 n=45 failures=0",
+      "required": true
+    },
+    {
+      "name": "false_hitl_cost_proxy",
+      "ok": true,
+      "value": {
+        "false_hitl_rate": 0.0,
+        "n_should_not_hitl": 12,
+        "interpretation": "false_hitl≈站长被多余打断的比例代理；非工时计量"
+      },
+      "source": "data/eval/hitl_gate_report.json",
+      "detail": "advisory only",
+      "required": false
+    },
+    {
+      "name": "contract_drift",
+      "ok": true,
+      "value": {
+        "expected": "2026-08-29.1",
+        "live_rag_contract_all_ok": true,
+        "live_rag_contract_version": "2026-08-29.1",
+        "joint_contract_version_match": true,
+        "consumer_fields_ok": true,
+        "consumer_fields_errors": []
+      },
+      "source": "data/eval/live_rag_contract_check.json + contract_consumer_fields.json",
+      "detail": "ok",
+      "required": false
+    },
+    {
+      "name": "leak_submit_rate",
+      "ok": true,
+      "value": {
+        "rate": 0.0,
+        "leak_signals": [],
+        "live_function_all_ok": true
+      },
+      "source": "data/eval/joint_evidence_pack.json + live_function_test.json",
+      "detail": "target rate=0; requires artifacts (no hand-fill) (advisory in standalone)",
+      "required": false
+    }
+  ],
+  "source_mtimes": {
+    "data\\eval\\parts_gate_ab.json": 1788061462.7839744,
+    "data\\eval\\live_function_test.json": 1788061461.4151387,
+    "data\\eval\\live_integration_manual.json": 1788061354.3400743,
+    "data\\eval\\live_rag_contract_check.json": 1788061112.124598,
+    "data\\eval\\joint_evidence_pack.json": 1788160456.5993257,
+    "data\\eval\\joint_failure_drill.json": 1788061472.207542,
+    "data\\eval\\hitl_gate_report.json": 1788154872.3406537
+  },
+  "hand_filled": false,
+  "note": "standalone profile: no :8001; offline goldset ≠ production precision; joint leak/live advisory"
+}

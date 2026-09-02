@@ -9,10 +9,13 @@ from app.domain.intent_rules import (
     CHAT_TOKENS,
     CONFLICT_TOKENS,
     DISPATCH_TOKENS,
+    EQUIPMENT_CONTEXT_TOKENS,
     FAULT_CODE_RE,
+    FAULT_PHRASE_TOKENS,
     FAULT_SYMPTOM_TOKENS,
     INJECTION_TOKENS,
     KNOWLEDGE_QUERY_TOKENS,
+    MASTER_VISIT_TOKENS,
     WEAK_ACTION_TOKENS,
 )
 
@@ -34,7 +37,7 @@ RunStatus = Literal[
     "cancelled",
 ]
 
-RoleName = Literal["technician", "parts_clerk", "station_chief", "finance", "general"]
+RoleName = Literal["technician", "parts_clerk", "station_chief", "finance", "hr", "general"]
 
 # 兼容旧 import：词表来自 data/intent_rules.json
 __all__ = [
@@ -80,9 +83,13 @@ class PartsCheck(TypedDict, total=False):
     items: list[dict[str, Any]]
     shortage: bool
     shortage_items: list[str]
+    unknown_parts: bool
+    ledger_degraded: bool
     alt_depot: str
     suggested_action: str
     note: str
+    depot_phone: str
+    depot_phone_note: str
 
 
 def copy_state(state: CopilotState) -> CopilotState:
@@ -104,22 +111,29 @@ class HitlState(TypedDict, total=False):
     required: bool
     prompt: str
     reasons: list[str]
-    decision: Literal["approve", "reject", "edit"] | None
+    # return=退回补件终止；edit 为历史别名（API 归一为 return）
+    decision: Literal["approve", "reject", "return", "edit"] | None
     note: str
     resolved: bool
     approver_key_role: str
+    pending_layers: list[str]
+    confirmations: dict[str, bool]
 
 
 class ServiceTicket(TypedDict, total=False):
     machine_model: str
     fault_codes: list[str]
     station: str
+    jobsite: str
     second_visit: bool
     sla_class: str
     response_hours: int
     warranty_claim: bool
     urgent: bool
     raw_excerpt: str
+    dispatch_status: str
+    scope: str
+    scope_note: str
 
 
 class CopilotState(TypedDict, total=False):
@@ -133,6 +147,8 @@ class CopilotState(TypedDict, total=False):
     max_iterations: int
     iteration: int
     intent: Intent
+    intent_confidence: float
+    intent_signals: list[str]
     next_action: str
     plan: list[str]
     rag_result: dict[str, Any]
@@ -144,6 +160,7 @@ class CopilotState(TypedDict, total=False):
     work_order_submit: dict[str, Any] | None
     parts_force_hints: list[str]
     hitl: HitlState
+    decision_certificate: dict[str, Any] | None
     submit_eligible: bool
     status: RunStatus
     final_summary: str
@@ -168,6 +185,8 @@ class CopilotState(TypedDict, total=False):
     station_override: str
     second_visit_override: bool | None
     sla_class_override: str
+    parent_run_id: str
+    return_for_rework: bool
 
 
 def empty_state(**kwargs: Any) -> CopilotState:
@@ -184,6 +203,8 @@ def empty_state(**kwargs: Any) -> CopilotState:
         "max_iterations": 8,
         "iteration": 0,
         "intent": "",  # 未分类；supervisor 首次进入时 classify_intent 写入
+        "intent_confidence": None,  # type: ignore[typeddict-item]
+        "intent_signals": [],
         "next_action": "supervisor",
         "plan": [],
         "rag_result": {},
@@ -201,7 +222,10 @@ def empty_state(**kwargs: Any) -> CopilotState:
             "decision": None,
             "note": "",
             "resolved": False,
+            "pending_layers": [],
+            "confirmations": {},
         },
+        "decision_certificate": None,
         "submit_eligible": False,
         "status": "running",
         "final_summary": "",
@@ -226,6 +250,8 @@ def empty_state(**kwargs: Any) -> CopilotState:
         "station_override": "",
         "second_visit_override": None,
         "sla_class_override": "",
+        "parent_run_id": "",
+        "return_for_rework": False,
     }
     base.update(kwargs)  # type: ignore[typeddict-item]
     return base

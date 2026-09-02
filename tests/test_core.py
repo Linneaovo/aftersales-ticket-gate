@@ -15,43 +15,42 @@ from app.policy.gates import (
     is_station_chief,
     role_from_api_key,
 )
-from app.quality.rules import run_quality_checks
+from app.quality.rules import detect_rag_degraded, run_quality_checks
+from app.policy.hitl_layers import compute_pending_layers, confirmations_covering
 from app.tools.parts_ledger import check_parts
 from app.tools.rag_client import RagToolError
+from tests.fakes import FakeLiveRag, FakeRag
 
 
-from tests.fakes.rag_stub import StubRagClient
+def _chief_confirmations(state: dict) -> dict[str, bool]:
+    pending = list((state.get("hitl") or {}).get("pending_layers") or []) or compute_pending_layers(state)
+    return confirmations_covering(pending)
 
 
-class FakeRag(StubRagClient):
-    """兼容旧测试名；实现见 tests/fakes/rag_stub.py。"""
-
-    def __init__(
-        self,
-        ask_payload: dict[str, Any] | None = None,
-        fail: bool = False,
-        parts: list[str] | None = None,
-    ) -> None:
-        # ask_payload=None 时走 stub 默认 + 冲突题动态合成；显式 payload 不被覆盖
-        super().__init__(
-            ask_payload=ask_payload,
-            fail=fail,
-            parts=parts,
-            ticket_id="T-DEMO-1",
-            request_id="fake-req",
-        )
-        self.offline = False  # API 单测模拟 live RAG 客户端
+@pytest.fixture(autouse=True)
+def _isolated_core_env(isolated_env):
+    """test_core 默认隔离 checkpoint，便于主路径 langgraph。"""
+    return None
 
 
 def _run(question: str, **kwargs: Any):
-    """Policy/节点快速回归：fallback 无 interrupt，与 langgraph 行为一致（见 test_playbooks spotlight）。"""
-    kwargs.setdefault("engine", "fallback")
+    """默认与 POST /runs 一致：langgraph 主路径。"""
+    kwargs.setdefault("engine", "langgraph")
+    client = kwargs.pop("client", None) or FakeRag()
     state = create_initial_state(question, **kwargs)
-    return run_until_pause(state, client=FakeRag(), persist=False)  # type: ignore[arg-type]
+    return run_until_pause(state, client=client, persist=False)  # type: ignore[arg-type]
+
+
+def _run_fb(question: str, **kwargs: Any):
+    """容灾引擎回归（无 interrupt）。"""
+    kwargs.setdefault("engine", "fallback")
+    client = kwargs.pop("client", None) or FakeRag()
+    state = create_initial_state(question, **kwargs)
+    return run_until_pause(state, client=client, persist=False)  # type: ignore[arg-type]
 
 
 def _run_lg(question: str, **kwargs: Any):
-    """与 POST /runs 相同的主路径引擎。"""
+    """显式 langgraph（与 _run 同义，保留旧调用点）。"""
     kwargs.setdefault("engine", "langgraph")
     client = kwargs.pop("client", None) or FakeRag()
     state = create_initial_state(question, **kwargs)
@@ -196,9 +195,25 @@ def test_hitl_reject():
     out = _run("SY215C H103请报修处理", api_key="demo-technician")
     assert out["status"] == "waiting_hitl"
     client = FakeRag()
-    out2 = apply_hitl(out, "reject", "暂缓", client=client, persist=False)  # type: ignore[arg-type]
+    out2 = apply_hitl(
+        out, "reject", "暂缓", client=client, persist=False, approver_api_key="demo-chief"
+    )  # type: ignore[arg-type]
     assert out2["status"] == "rejected"
     assert client.submit_calls == 0
+
+
+def test_apply_hitl_domain_requires_chief():
+    """领域层强制站长：非站长 Key 不得 approve/reject（不只依赖 FastAPI）。"""
+    import pytest
+
+    out = _run("SY215C H103请报修处理", api_key="demo-technician")
+    assert out["status"] == "waiting_hitl"
+    with pytest.raises(PermissionError, match="站长"):
+        apply_hitl(
+            out, "approve", "越权", client=FakeRag(), persist=False, approver_api_key="demo-technician"
+        )  # type: ignore[arg-type]
+    with pytest.raises(PermissionError, match="站长"):
+        apply_hitl(out, "reject", "越权", client=FakeRag(), persist=False)  # type: ignore[arg-type]
 
 
 def test_hitl_approve_with_auto_submit():
@@ -206,27 +221,35 @@ def test_hitl_approve_with_auto_submit():
         "长沙星沙 SY215C H103请报修处理",
         api_key="demo-technician",
         auto_submit=True,
-        engine="fallback",
+        engine="langgraph",
         station="长沙星沙服务站",
         parts_force_hints=["液压泵总成"],
     )
     client = FakeRag(parts=["液压泵总成"])
     out = run_until_pause(state, client=client, persist=False)  # type: ignore[arg-type]
     assert out["status"] == "waiting_hitl"
+    assert out.get("engine") == "langgraph"
+    assert "shortage" in ((out.get("hitl") or {}).get("pending_layers") or [])
     out2 = apply_hitl(
-        out, "approve", "站长同意", client=client, persist=False, approver_api_key="demo-chief"
+        out,
+        "approve",
+        "站长同意",
+        client=client,
+        persist=False,
+        approver_api_key="demo-chief",
+        confirmations=_chief_confirmations(out),
     )  # type: ignore[arg-type]
     assert out2["status"] == "succeeded"
     assert client.submit_calls == 1
 
 
-def test_hitl_approve_submits_without_auto_submit():
-    """P1 默认 auto_submit=false；站长 approve 后仍应 submit mock inbox。"""
+def test_hitl_approve_without_layer_confirmations_blocks_submit():
+    """单一 approve 不能一键放行缺料门禁。"""
     state = create_initial_state(
         "长沙星沙 SY215C H103请报修处理",
         api_key="demo-technician",
-        auto_submit=False,
-        engine="fallback",
+        auto_submit=True,
+        engine="langgraph",
         station="长沙星沙服务站",
         parts_force_hints=["液压泵总成"],
     )
@@ -234,7 +257,36 @@ def test_hitl_approve_submits_without_auto_submit():
     out = run_until_pause(state, client=client, persist=False)  # type: ignore[arg-type]
     assert out["status"] == "waiting_hitl"
     out2 = apply_hitl(
-        out, "approve", "站长确认", client=client, persist=False, approver_api_key="demo-chief"
+        out, "approve", "只点批准", client=client, persist=False, approver_api_key="demo-chief"
+    )  # type: ignore[arg-type]
+    assert client.submit_calls == 0
+    assert out2.get("work_order_submit") is None
+    ok, blockers = evaluate_submit_eligible(out2)
+    assert ok is False
+    assert "POL-PARTS-01" in " ".join(blockers)
+
+
+def test_hitl_approve_submits_without_auto_submit():
+    """P1 默认 auto_submit=false；站长分层确认后仍应 submit mock inbox。"""
+    state = create_initial_state(
+        "长沙星沙 SY215C H103请报修处理",
+        api_key="demo-technician",
+        auto_submit=False,
+        engine="langgraph",
+        station="长沙星沙服务站",
+        parts_force_hints=["液压泵总成"],
+    )
+    client = FakeRag(parts=["液压泵总成"])
+    out = run_until_pause(state, client=client, persist=False)  # type: ignore[arg-type]
+    assert out["status"] == "waiting_hitl"
+    out2 = apply_hitl(
+        out,
+        "approve",
+        "站长确认",
+        client=client,
+        persist=False,
+        approver_api_key="demo-chief",
+        confirmations=_chief_confirmations(out),
     )  # type: ignore[arg-type]
     assert out2["status"] == "succeeded"
     assert client.submit_calls == 1
@@ -254,6 +306,57 @@ def test_quality_blocks_ungrounded():
         },
     )
     assert run_quality_checks(st)["passed"] is False
+
+
+def test_detect_rag_degraded_retrieve_only():
+    assert detect_rag_degraded({"retrieve_only": True, "answer": "摘要"}) is True
+    assert detect_rag_degraded({"answer": "ollama 不可用，仅检索摘要", "sources": []}) is True
+    assert detect_rag_degraded({"answer": "H103 液压压力", "grounded": True}) is False
+
+
+def test_detect_rag_degraded_contract_incomplete():
+    assert detect_rag_degraded({"answer": "x", "grounded": False, "contract_gate_incomplete": True}) is True
+    assert detect_rag_degraded({"answer": "x", "grounded": True, "contract_gate_incomplete": False}) is False
+
+
+def test_quality_force_hitl_on_rag_degrade():
+    st = empty_state(
+        intent="fault_dispatch",
+        rag_result={
+            "answer": "检索摘要（ollama 不可用）",
+            "sources": [{"chunk": {"source": "a.txt"}}],
+            "grounded": True,
+            "grounding_score": 0.7,
+            "blocked": False,
+            "retrieve_only": True,
+        },
+    )
+    report = run_quality_checks(st)
+    assert report["force_hitl"] is True
+    assert "POL-DEGRADE-01" in (report.get("policy_ids") or [])
+
+
+def test_langgraph_rag_degrade_waits_hitl():
+    """RAG retrieve_only 降级 → POL-DEGRADE-01 强制人确。"""
+    payload = {
+        "answer": "检索摘要（生成降级）",
+        "sources": [{"chunk": {"source": "故障码对照表.txt", "text": "H103"}, "score": 0.8}],
+        "grounded": True,
+        "grounding_score": 0.7,
+        "blocked": False,
+        "retrieve_only": True,
+        "conflicts": [],
+    }
+    out = _run_lg(
+        "长沙星沙 SY215C H103请报修处理",
+        api_key="demo-technician",
+        station="长沙星沙服务站",
+        parts_force_hints=["液压滤芯"],
+        client=FakeRag(ask_payload=payload, parts=["液压滤芯"]),
+    )
+    assert out["status"] == "waiting_hitl"
+    reasons = " ".join((out.get("hitl") or {}).get("reasons") or [])
+    assert "POL-DEGRADE-01" in reasons or out.get("rag_degraded") is True
 
 
 def test_quality_blocks_single_verdict_on_conflict():
@@ -400,7 +503,48 @@ def test_conflict_ungrounded_waits_hitl_not_reject():
     assert "POL-CONFLICT-01" in reasons
 
 
+def test_conflict_blocked_ungrounded_waits_hitl_not_reject():
+    """Live RAG blocked+ungrounded 冲突题：POL-GROUND-01 软化，不进 POL-GROUND-02 硬拒。"""
+    payload = {
+        "answer": "依据当前知识库无法确认，请站长人确。",
+        "sources": [],
+        "grounded": False,
+        "grounding_score": 0.0,
+        "blocked": True,
+        "block_reason": "ungrounded",
+        "conflicts": [],
+    }
+    out = _run_lg(
+        "星沙站 SY215C 液压泵质保期新旧制度不一致，到底哪个为准？",
+        api_key="demo-technician",
+        client=FakeRag(ask_payload=payload),
+    )
+    assert out["status"] == "waiting_hitl"
+    assert out["intent"] == "conflict_review"
+    critic = out.get("critic_report") or {}
+    assert critic.get("passed") is True
+    assert "POL-GROUND-02" not in (critic.get("policy_ids") or [])
+    assert "POL-GROUND-01" in (critic.get("policy_ids") or [])
+    assert "POL-CONFLICT-01" in (critic.get("policy_ids") or [])
+
+
 def test_conflict_review_requires_hitl():
+    payload = {
+        "answer": "两版并列不作裁决",
+        "sources": [{"chunk": {"source": "质保制度修订稿.txt"}, "score": 0.9}],
+        "grounded": True,
+        "grounding_score": 0.9,
+        "blocked": False,
+        "conflicts": [{"a": "12个月", "b": "18个月"}],
+    }
+    # HITL 须走 langgraph（fallback 会 failed，禁止假 waiting_hitl）
+    state = create_initial_state("质保期新旧制度哪个为准", api_key="demo-technician", engine="langgraph")
+    out = run_until_pause(state, client=FakeRag(ask_payload=payload), persist=False)  # type: ignore[arg-type]
+    assert out["status"] == "waiting_hitl"
+    assert (out.get("conflict_bundle") or {}).get("present") is True
+
+
+def test_conflict_review_fallback_cannot_fake_hitl():
     payload = {
         "answer": "两版并列不作裁决",
         "sources": [{"chunk": {"source": "质保制度修订稿.txt"}, "score": 0.9}],
@@ -411,8 +555,8 @@ def test_conflict_review_requires_hitl():
     }
     state = create_initial_state("质保期新旧制度哪个为准", api_key="demo-technician", engine="fallback")
     out = run_until_pause(state, client=FakeRag(ask_payload=payload), persist=False)  # type: ignore[arg-type]
-    assert out["status"] == "waiting_hitl"
-    assert (out.get("conflict_bundle") or {}).get("present") is True
+    assert out["status"] == "failed"
+    assert "fallback" in str(out.get("error") or "").lower()
 
 
 def test_max_iterations():
@@ -472,19 +616,20 @@ def test_simulate_baselines():
 
 
 @pytest.mark.parametrize(
-    "question,kwargs,expect_status",
+    "question,kwargs,expect_lg,expect_fb",
     [
-        ("你好啊讲个笑话", {}, "rejected"),
-        ("SY215C H103请报修处理", {"api_key": "demo-technician"}, "waiting_hitl"),
-        ("H103是什么意思", {"api_key": "demo-technician"}, "succeeded"),
+        ("你好啊讲个笑话", {}, "rejected", "rejected"),
+        # HITL：langgraph 可 resume；fallback 须 failed（禁止假 waiting_hitl）
+        ("SY215C H103请报修处理", {"api_key": "demo-technician"}, "waiting_hitl", "failed"),
+        ("H103是什么意思", {"api_key": "demo-technician"}, "succeeded", "succeeded"),
     ],
 )
-def test_core_scenarios_langgraph(question: str, kwargs: dict, expect_status: str):
-    """主路径引擎与 policy 层 fallback 结果一致（status 级）。"""
-    fb = _run(question, **kwargs)
+def test_core_scenarios_langgraph(question: str, kwargs: dict, expect_lg: str, expect_fb: str):
+    """主路径 langgraph 与容灾 fallback：HITL 场景故意不一致。"""
+    fb = _run_fb(question, **kwargs)
     lg = _run_lg(question, **kwargs)
-    assert fb["status"] == expect_status
-    assert lg["status"] == expect_status
+    assert fb["status"] == expect_fb
+    assert lg["status"] == expect_lg
     assert lg.get("engine") == "langgraph"
 
 
@@ -505,6 +650,56 @@ def test_finance_cannot_draft():
     out = _run("SY215C H103请报修处理", api_key="demo-finance")
     assert out["status"] == "rejected"
     assert "不可创建工单" in (out.get("final_summary") or "")
+
+
+def test_hr_cannot_draft_and_is_independent_role():
+    assert role_from_api_key("demo-hr") == "hr"
+    out = _run("SY215C H103请报修处理", api_key="demo-hr")
+    assert out["status"] == "rejected"
+    assert out.get("role") == "hr"
+    assert "不可创建工单" in (out.get("final_summary") or "")
+
+
+def test_hr_conflict_redacted():
+    cb = filter_conflict_for_role(
+        {"present": True, "items": [{"a": 1}], "sources_pair": [{"x": 1}], "policy": "no_arbitration"},
+        "hr",
+    )
+    assert cb is not None
+    assert cb.get("redacted") is True
+    assert cb.get("items") == []
+
+
+def test_langgraph_draft_driven_shortage_without_force_hints():
+    """主路径 langgraph：无 parts_force_hints，配件来自 FakeRag draft → POL-PARTS-01。"""
+    client = FakeRag(parts=["液压泵总成"])
+    out = _run_lg(
+        "长沙星沙 SY215C H103请报修处理",
+        api_key="demo-technician",
+        station="长沙星沙服务站",
+        client=client,
+    )
+    assert out["status"] == "waiting_hitl"
+    parts = out.get("parts_check") or {}
+    assert parts.get("hints_source") == "rag_draft"
+    assert parts.get("shortage") is True
+    assert "POL-PARTS-01" in " ".join((out.get("hitl") or {}).get("reasons") or [])
+
+
+def test_parts_check_exposes_demo_phone_note():
+    out = check_parts(["液压泵总成"])
+    assert out.get("depot_phone") == "000-DEMO-5600"
+    note = str(out.get("depot_phone_note") or "")
+    assert "虚构" in note or "演示" in note
+    assert "DEMO" in str(out.get("suggested_action") or "") or "演示" in note
+
+
+def test_parts_unknown_not_treated_as_transferable_shortage():
+    out = check_parts(["不存在的怪件XYZ"])
+    assert out.get("unknown_parts") is True
+    assert out.get("shortage") is False
+    assert "调拨" not in str(out.get("suggested_action") or "") or "禁止" in str(out.get("suggested_action") or "")
+    assert "不可视为可调拨" in str(out.get("note") or "") or "禁止" in str(out.get("suggested_action") or "")
 
 
 def test_finance_rejects_inline_rag_work_order():
@@ -714,9 +909,12 @@ def test_api_key_fingerprint_restore_roundtrip(tmp_path, monkeypatch):
     from app.tracing.store import load_run, save_run_snapshot
 
     monkeypatch.setenv("RUNS_DB_PATH", str(tmp_path / "runs.db"))
+    monkeypatch.setenv("CHECKPOINT_DB_PATH", str(tmp_path / "checkpoints.db"))
     from app.config import get_settings
+    from app.graph.builder import reset_graph_cache
 
     get_settings.cache_clear()
+    reset_graph_cache()
 
     state = create_initial_state("SY215C H103", api_key="demo-parts")
     state = run_until_pause(state, client=FakeRag(), persist=True)
@@ -736,6 +934,13 @@ def test_public_view_strict_mode():
             "ok": True,
             "draft": {"machine_model": "SY215C", "fault_codes": ["H103"], "notes": "secret"},
         },
+        parts_check={
+            "needed": True,
+            "shortage": True,
+            "hints_source": "rag_draft",
+            "master_data_authority": "parts_ledger.json",
+            "note": "缺料",
+        },
         trace_events=[{"node": "rag"}],
     )
     view = public_view(st, view="public")
@@ -743,3 +948,106 @@ def test_public_view_strict_mode():
     assert view.get("trace_events") == []
     draft = view.get("work_order_draft") or {}
     assert "notes" not in str(draft)
+    parts = view.get("parts_check") or {}
+    assert parts.get("hints_source") == "rag_draft"
+    assert parts.get("master_data_authority") == "parts_ledger.json"
+
+
+def test_parts_preserves_master_data_authority():
+    from app.graph.nodes import parts_node
+    from app.graph.state import empty_state
+
+    st = empty_state(role="technician", parts_force_hints=["液压滤芯"])
+    out = parts_node(st)
+    pc = out.get("parts_check") or {}
+    assert pc.get("master_data_authority") == "parts_ledger.json"
+    events = out.get("trace_events") or []
+    assert events and events[-1].get("hints_source") in {"force_hints", "rag_draft"}
+
+
+def test_role_matrix_can_submit_aligned():
+    """矩阵只留 can_submit_direct；submit 门禁与 can_submit 对齐（无 force_hitl 同义空转）。"""
+    from app.policy.gates import can_create_draft, can_submit, evaluate_submit_eligible
+    from app.policy.role_graph import (
+        ROLE_MATRIX,
+        role_can_draft,
+        role_can_submit_direct,
+        role_requires_hitl_before_submit,
+    )
+
+    assert "force_hitl_on_dispatch" not in ROLE_MATRIX["technician"]
+    assert role_can_submit_direct("technician") is False
+    assert role_can_submit_direct("station_chief") is True
+    assert can_submit("technician") is False
+    assert can_submit("station_chief") is True
+    assert role_requires_hitl_before_submit("technician") is True
+    assert role_requires_hitl_before_submit("station_chief") is False
+    # can_draft 单源：gates ↔ ROLE_MATRIX
+    assert role_can_draft("technician") is True
+    assert role_can_draft("finance") is False
+    assert role_can_draft("hr") is False
+    assert can_create_draft("technician") is True
+    assert can_create_draft("finance") is False
+    assert can_create_draft("hr") is False
+    ok, blockers = evaluate_submit_eligible(
+        {
+            "role": "technician",
+            "work_order_draft": {"ok": True},
+            "service_ticket": {"station": "长沙星沙服务站"},
+            "hitl": {},
+        }
+    )
+    assert ok is False
+    assert any("POL-ROLE-01" in b for b in blockers)
+
+
+def test_non_chief_auto_submit_forced_hitl():
+    """增量相对 can_submit：非站长 auto_submit + 有库存 → POL-ROLE-01 强制人确，不计误开单。"""
+    from app.eval.compare import would_submit_without_hitl
+
+    out = _run(
+        "长沙星沙服务站：SY215C 报故障码 H103，请安排报修开单",
+        api_key="demo-technician",
+        auto_submit=True,
+        station="长沙星沙服务站",
+        parts_force_hints=["液压滤芯"],
+        client=FakeRag(parts=["液压滤芯"]),
+    )
+    assert out.get("status") == "waiting_hitl"
+    reasons = " ".join((out.get("hitl") or {}).get("reasons") or [])
+    assert "POL-ROLE-01" in reasons
+    assert (out.get("parts_check") or {}).get("shortage") is not True
+    assert would_submit_without_hitl(out) is False
+    assert out.get("work_order_submit") is None
+    assert out.get("auto_submit") is False
+
+
+def test_a07_misdispatch_risk_not_hardcoded():
+    from app.eval.compare import compare_cases, simulate_copilot
+
+    copilot = simulate_copilot("你好", engine="langgraph")
+    assert "would_submit_without_hitl" in copilot
+    assert copilot["would_submit_without_hitl"] is False
+    summary = compare_cases(limit=3)["summary"]
+    # 必须是由计数得出的 float，禁止写死恒 0 却无统计路径
+    assert isinstance(summary.get("misdispatch_risk_copilot"), float)
+    assert 0.0 <= float(summary["misdispatch_risk_copilot"]) <= 1.0
+    assert "禁止写死" in str(summary.get("note") or "")
+
+
+def test_a07_leak_formula_can_be_nonzero():
+    """负例：已 submit 未经 approve → would_submit_without_hitl=True，证明计数非写死 0。"""
+    from app.eval.compare import would_submit_without_hitl
+
+    leak = {
+        "work_order_submit": {"ticket_id": "T-LEAK", "destination": "rag_mock_inbox"},
+        "hitl": {"required": True, "resolved": False},
+    }
+    assert would_submit_without_hitl(leak) is True
+    sealed = {
+        "work_order_submit": {"ticket_id": "T-OK"},
+        "hitl": {"resolved": True, "decision": "approve"},
+    }
+    assert would_submit_without_hitl(sealed) is False
+    # 若 1/3 样本泄漏，风险率 > 0（与报告 round(count/n) 同一算术）
+    assert round(1 / 3, 3) > 0.0

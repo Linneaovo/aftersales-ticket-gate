@@ -1,0 +1,22 @@
+{
+  "schema": "contract_consumer_fields/v1",
+  "contract_version": "2026-08-29.1",
+  "note": "仅钉 Copilot 消费字段；RAG 内部多余字段不在此表。breaking 变更须升 CONTRACT_VERSION。",
+  "ask": {
+    "required": ["answer", "sources", "grounded"],
+    "optional": ["grounding_score", "blocked", "block_reason", "conflicts", "work_order", "request_id"],
+    "breaking_if_removed": ["answer", "sources", "grounded"]
+  },
+  "draft": {
+    "required_any_of_body": ["fault_codes", "fill_fields", "ticket_type"],
+    "note": "经 extract_draft_body 消费"
+  },
+  "submit": {
+    "required_any_of": ["ticket_id", "id", "ok"],
+    "ownership_fields": ["source", "submitted_by", "run_id", "decision_certificate_phase"]
+  },
+  "inbox": {
+    "required": ["items"],
+    "lane_values": ["business", "probe", "all"]
+  }
+}

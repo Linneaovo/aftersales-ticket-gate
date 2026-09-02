@@ -1,0 +1,27 @@
+{
+  "schema": "parts_live_allowlist/v1",
+  "authority": "copilot_data_parts_live_allowlist",
+  "authority_note": "联合主数据单权威：Live H103 推荐件号以本文件为准；库存以 parts_ledger.json 为准。RAG 仓只校验、不另维护平行 allowlist。",
+  "consumers": [
+    "scripts/check_parts_live_align.py",
+    "enterprise-rag/scripts/check_copilot_parts_allowlist.py"
+  ],
+  "scenario": "live_h103_xingsha",
+  "note": "Live RAG H103 推荐件号全集；须 ⊆ parts_ledger；缺料主件 stock=0，对照件 stock>0。故意删号 → align 红，禁止默默变 unknown 主叙事。",
+  "part_nos": [
+    "60277011",
+    "60212345",
+    "60212001",
+    "60288102",
+    "60330018",
+    "60455021"
+  ],
+  "shortage_part_nos": ["60277011"],
+  "in_stock_controls": [
+    "60212345",
+    "60212001",
+    "60288102",
+    "60330018",
+    "60455021"
+  ]
+}

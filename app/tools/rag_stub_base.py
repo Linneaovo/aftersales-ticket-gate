@@ -9,12 +9,17 @@ from app.tools.rag_client import RagToolError
 _CONFLICT_MARKERS = ("质保", "哪个为准", "新旧", "不一致")
 
 
+def infer_conflicts_from_question(question: str) -> list[dict[str, Any]]:
+    """问句含冲突线索时补 conflicts（Live RAG 未返回时仍触发 POL-CONFLICT 门禁）。"""
+    if not question or not any(x in question for x in _CONFLICT_MARKERS):
+        return []
+    return [
+        {"doc_a": "质保制度2023旧版.txt", "doc_b": "质保制度修订稿.txt", "metric": "质保月数"}
+    ]
+
+
 def build_stub_ask_payload(question: str = "") -> dict[str, Any]:
-    conflicts: list[dict[str, Any]] = []
-    if question and any(x in question for x in _CONFLICT_MARKERS):
-        conflicts = [
-            {"doc_a": "质保制度2023旧版.txt", "doc_b": "质保制度修订稿.txt", "metric": "质保月数"}
-        ]
+    conflicts: list[dict[str, Any]] = infer_conflicts_from_question(question)
     return {
         "answer": "两版制度数字不一致，并列展示，不作裁决。"
         if conflicts
@@ -67,6 +72,8 @@ class RagStubClient:
         self.ticket_id = ticket_id
         self.draft_calls = 0
         self.submit_calls = 0
+        self.feedback_calls: list[dict[str, Any]] = []
+        self._feedback_by_run: dict[str, list[dict[str, Any]]] = {}
 
     def _maybe_fail(self, op: str) -> None:
         if self.fail or self.fail_on == op:
@@ -100,7 +107,16 @@ class RagStubClient:
         return {"ok": True, "ticket_id": self.ticket_id}
 
     def submit_feedback(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        return {"ok": True, "id": f"fb-{self.ticket_id}"}
+        self.feedback_calls.append({"args": args, "kwargs": kwargs})
+        rid = kwargs.get("run_id") or f"fb-{self.ticket_id}"
+        rating = kwargs.get("rating") or (args[0] if args else "up")
+        rec = {"ok": True, "id": f"fb-{self.ticket_id}", "run_id": rid, "rating": rating}
+        self._feedback_by_run.setdefault(str(rid), []).append(rec)
+        return rec
+
+    def list_feedback_by_run_id(self, run_id: str, **kwargs: Any) -> dict[str, Any]:
+        items = list(self._feedback_by_run.get(str(run_id), []))
+        return {"run_id": run_id, "count": len(items), "items": items}
 
     def list_inbox(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
         return {"items": [], "count": 0}

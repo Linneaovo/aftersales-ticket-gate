@@ -1,0 +1,26 @@
+{
+  "contract_version": "2026-08-29.1",
+  "all_ok": true,
+  "rag_base": "http://127.0.0.1:8001",
+  "checks": {
+    "health": {
+      "ok": true
+    },
+    "ask": {
+      "ok": true
+    },
+    "draft": {
+      "ok": true
+    },
+    "submit": {
+      "ok": true
+    },
+    "submit_ownership": {
+      "ok": true
+    },
+    "inbox": {
+      "ok": true
+    }
+  },
+  "errors": []
+}

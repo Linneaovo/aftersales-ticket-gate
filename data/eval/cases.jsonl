@@ -22,7 +22,7 @@
 {"id": "H06", "bucket": "hitl", "role": "parts_clerk", "expect_can_submit_direct": false}
 {"id": "P01", "bucket": "parts", "hints": ["液压泵总成"], "expect_shortage": true}
 {"id": "P02", "bucket": "parts", "hints": ["液压滤芯"], "expect_shortage": false}
-{"id": "P03", "bucket": "parts", "hints": ["不存在配件XYZ"], "expect_shortage": true}
+{"id": "P03", "bucket": "parts", "hints": ["不存在配件XYZ"], "expect_shortage": false, "expect_unknown_parts": true}
 {"id": "E01", "bucket": "error", "simulate": "rag_500", "expect_status": "failed"}
 {"id": "E02", "bucket": "error", "max_iterations": 1, "expect_status": "failed"}
 {"id": "E2E01", "bucket": "e2e", "playbook": "p1_xingsha_h103", "expect_status": "waiting_hitl"}

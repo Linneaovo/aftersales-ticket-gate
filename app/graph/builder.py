@@ -32,7 +32,10 @@ def get_checkpointer() -> Any:
             path = Path(get_settings().checkpoint_db_path)
             path.parent.mkdir(parents=True, exist_ok=True)
             conn = sqlite3.connect(str(path), check_same_thread=False)
-            _checkpointer = SqliteSaver(conn)
+            saver = SqliteSaver(conn)
+            if hasattr(saver, "setup"):
+                saver.setup()
+            _checkpointer = saver
         except ImportError:
             from langgraph.checkpoint.memory import MemorySaver
 
@@ -62,29 +65,48 @@ def clear_checkpoint_thread(thread_id: str) -> None:
         return
     conn = sqlite3.connect(str(path), check_same_thread=False)
     try:
-        conn.execute("DELETE FROM writes WHERE thread_id = ?", (thread_id,))
-        conn.execute("DELETE FROM checkpoints WHERE thread_id = ?", (thread_id,))
+        try:
+            conn.execute("DELETE FROM writes WHERE thread_id = ?", (thread_id,))
+        except sqlite3.OperationalError:
+            pass
+        try:
+            conn.execute("DELETE FROM checkpoints WHERE thread_id = ?", (thread_id,))
+        except sqlite3.OperationalError:
+            pass
         conn.commit()
     finally:
         conn.close()
 
 
 def checkpoint_exists(thread_id: str) -> bool:
-    """检查 LangGraph checkpoint 线程是否存在。"""
+    """检查 LangGraph checkpoint 线程是否存在（SQLite 或当前 MemorySaver）。"""
     path = Path(get_settings().checkpoint_db_path)
-    if not path.exists():
-        return False
-    conn = sqlite3.connect(str(path), check_same_thread=False)
-    try:
-        row = conn.execute(
-            "SELECT 1 FROM checkpoints WHERE thread_id = ? LIMIT 1",
-            (thread_id,),
-        ).fetchone()
-        return row is not None
-    except sqlite3.OperationalError:
-        return False
-    finally:
-        conn.close()
+    if path.exists():
+        conn = sqlite3.connect(str(path), check_same_thread=False)
+        try:
+            row = conn.execute(
+                "SELECT 1 FROM checkpoints WHERE thread_id = ? LIMIT 1",
+                (thread_id,),
+            ).fetchone()
+            if row is not None:
+                return True
+        except sqlite3.OperationalError:
+            pass
+        finally:
+            conn.close()
+    # MemorySaver / InMemorySaver：进程内仍可 resume（测试无 sqlite 包时）
+    cp = _checkpointer
+    if cp is not None:
+        storage = getattr(cp, "storage", None)
+        if isinstance(storage, dict) and thread_id in storage:
+            return True
+        try:
+            cfg = {"configurable": {"thread_id": thread_id}}
+            if cp.get_tuple(cfg) is not None:
+                return True
+        except Exception:  # noqa: BLE001
+            pass
+    return False
 
 
 def list_checkpoint_thread_ids() -> set[str]:

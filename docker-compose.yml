@@ -1,0 +1,53 @@
+# Standalone：Copilot API + Streamlit（无 enterprise-rag :8001）
+# 用法：
+#   docker compose up --build -d
+#   docker compose exec api python scripts/reset_demo_state.py
+#   docker compose exec api python scripts/demo_preflight.py --standalone
+#   浏览器：API http://127.0.0.1:8002/docs  UI http://127.0.0.1:8502
+
+services:
+  api:
+    build: .
+    container_name: copilot-standalone-api
+    ports:
+      - "8002:8002"
+    env_file:
+      - .env.standalone
+    environment:
+      AGENT_HOST: "0.0.0.0"
+      AGENT_PORT: "8002"
+      COPILOT_BASE_URL: "http://127.0.0.1:8002"
+    volumes:
+      - copilot-data:/app/data
+    command: >
+      uvicorn app.main:app
+      --host 0.0.0.0
+      --port 8002
+      --workers 1
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://127.0.0.1:8002/health', timeout=5).raise_for_status()"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  ui:
+    build: .
+    container_name: copilot-standalone-ui
+    ports:
+      - "8502:8502"
+    env_file:
+      - .env.standalone
+    environment:
+      COPILOT_BASE_URL: "http://api:8002"
+    depends_on:
+      api:
+        condition: service_healthy
+    command: >
+      streamlit run app/ui/streamlit_app.py
+      --server.port 8502
+      --server.address 0.0.0.0
+      --server.headless true
+
+volumes:
+  copilot-data:
