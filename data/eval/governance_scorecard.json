@@ -1,8 +1,8 @@
 {
   "schema": "governance_scorecard/v1",
   "profile": "full",
-  "generated_at": "2026-08-31T08:55:49.076488+00:00",
-  "git_sha": "bbdb43c",
+  "generated_at": "2026-09-07T07:12:21.968746+00:00",
+  "git_sha": "f91d819",
   "app_version": "0.2.19-demo",
   "all_ok": true,
   "metrics": [
@@ -111,7 +111,7 @@
         "expected": "2026-08-29.1",
         "live_rag_contract_all_ok": true,
         "live_rag_contract_version": "2026-08-29.1",
-        "joint_contract_version_match": true,
+        "joint_contract_version_match": null,
         "consumer_fields_ok": true,
         "consumer_fields_errors": []
       },
@@ -148,13 +148,13 @@
     }
   ],
   "source_mtimes": {
-    "data\\eval\\parts_gate_ab.json": 1788061462.7839744,
+    "data\\eval\\parts_gate_ab.json": 1788252000.24366,
     "data\\eval\\live_function_test.json": 1788061461.4151387,
     "data\\eval\\live_integration_manual.json": 1788061354.3400743,
-    "data\\eval\\live_rag_contract_check.json": 1788061112.124598,
-    "data\\eval\\joint_evidence_pack.json": 1788160456.5993257,
-    "data\\eval\\joint_failure_drill.json": 1788061472.207542,
-    "data\\eval\\hitl_gate_report.json": 1788154872.3406537
+    "data\\eval\\live_rag_contract_check.json": 1788263189.8987513,
+    "data\\eval\\joint_evidence_pack.json": 1788763491.862156,
+    "data\\eval\\joint_failure_drill.json": 1788763491.856176,
+    "data\\eval\\hitl_gate_report.json": 1788764973.4046035
   },
   "hand_filled": false,
   "note": "scores aggregated from artifacts/in-process checks only; never hand-edit; offline≠live precision"

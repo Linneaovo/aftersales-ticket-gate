@@ -1,6 +1,6 @@
 ﻿# 评测产物说明
 
-入口：[docs/OVERVIEW.md](../../docs/OVERVIEW.md) · 范围：[docs/STANDALONE_SCOPE.md](../../docs/STANDALONE_SCOPE.md)
+入口：[README.md](../../README.md) · 范围：[docs/STANDALONE_SCOPE.md](../../docs/STANDALONE_SCOPE.md) · 双仓：[docs/DUAL_REPO.md](../../docs/DUAL_REPO.md)
 
 ## Standalone（不依赖 :8001）
 

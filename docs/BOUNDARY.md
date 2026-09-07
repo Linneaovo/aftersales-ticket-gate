@@ -1,59 +1,47 @@
 # 项目边界
 
-> 总入口：[OVERVIEW.md](OVERVIEW.md) · 自立范围：[STANDALONE_SCOPE.md](STANDALONE_SCOPE.md)
+总入口：[README.md](../README.md) · 单仓范围：[STANDALONE_SCOPE.md](STANDALONE_SCOPE.md)
 
-## 对外名称
+## 名称
 
-**工程机械售后 · 报修开单门禁 Copilot**（LangGraph 门禁编排）  
-EN: *After-Sales Ticket Gate Copilot*
+**工程机械售后 · 报修开单门禁 Copilot**（EN: *After-Sales Ticket Gate Copilot*）
 
-> 对外统一「报修开单门禁」；不叫「派工系统」。`fault_dispatch` / 目录 `dispatch` = **仅内部技术名**。技师派工、排班在 **ERP**，本仓不做。
+对外不叫「派工系统」。代码里的 `fault_dispatch`、目录名 `dispatch` 仅内部标识；技师排班、派工在 ERP，本仓不做。
 
-## 学生数据诚实口径（必背）
+## 演示数据是什么
 
-| 数据 | 是什么 | 不是什么 |
-|------|--------|----------|
-| `station_profile.json` | 演示站务结构（班组/覆盖半径/工地别名） | 经销商 CRM / 主机厂主数据 |
-| `parts_ledger.json` | 剧本库存 + WMS 风格字段；可改 stock 反证门禁 | 生产 WMS |
-| `scripts/mock_parts_wms.py` | 本地 HTTP 伪台账，证明 `HttpPartsLedger` 路径 | 三一/中联真接口 |
-| Fixture 知识源 | 契约形 ask/draft 响应（`knowledge_port=fixture`） | Live 联调证据 / 向量检索 |
-| SLA 截止戳 | `intake_ts + response_hours` | 实时计时中台 |
-| HITL `return` | 退回补件终止（不改 draft） | 在线改单编辑器 |
+| 数据 | 实际含义 |
+|------|----------|
+| `station_profile.json` | 演示用站务结构（班组、覆盖半径、工地别名） |
+| `parts_ledger.json` | 剧本库存；改 stock 可对照缺料门禁 |
+| `scripts/mock_parts_wms.py` | 本地 HTTP 伪台账，验证 HTTP 台账路径 |
+| Fixture 知识源 | 契约形状的 ask/draft 响应，不是向量检索 |
+| SLA 截止时间 | `intake + response_hours`，不是实时计时服务 |
+| HITL 退回 | 终止本单并提示补件，不是在线改单编辑器 |
 
-**拿不到真台账不影响过初面**：面试官要的是边界清晰 + 门禁可证伪，不是偷生产库。
-
-## 验收分层（必背 · 数字 SSOT）
-
-| 层 | 含义 |
-|----|------|
-| **Standalone** | 无 `:8001`；Fixture + `file_outbox` + `standalone_scorecard` |
-| pytest FakeRag（离线） | 编排 + POL；**≠ Live 验收** |
-| Live / joint pack | **加分**；pack 须 `live_verified=true` |
-| CI | 永远 FakeRag；`live-linkage.yml` 默认 `if: false` |
-
-## 已实现（PoC）
+## 已实现
 
 | 能力 | 说明 |
 |------|------|
-| 意图分流 | 规则表（关键词 + 低置信 `POL-INTENT-01`），Copilot 侧无 LLM |
-| 知识源端口 | Fixture（Standalone 一等公民）或 HTTP → enterprise-rag `:8001`（Live 加分） |
-| 规则质检 | POL-* Policy-as-Code（`POLICY_CATALOG_VERSION`） |
-| 配件预核 | 本地 JSON / 可选 mock WMS HTTP |
-| 站长人确 | LangGraph interrupt；approve / reject / **return（退回补件）** |
-| Decision Snapshot | HITL/批准行动快照（schema=`decision_certificate`；非防篡改中台） |
-| 提交端口 | `SubmitDestination`：Standalone 默认 `file_outbox`；Live 常用 `rag_mock_inbox`；`idempotency_key=run_id`；**非 ERP** |
-| 本仓 Outbox | `GET /outbox` · `source=copilot_hitl` · `is_production_ticket=false` |
-| 治理评测 | `standalone_scorecard`（主）· `governance_scorecard` / joint（加分） |
+| 意图分流 | 关键词规则；低置信可进人确 |
+| 知识源 | 单仓用 Fixture；联调用 HTTP 调 `:8001` |
+| 策略门禁 | 主路径五条 + 目录中其余策略（`GET /policies`） |
+| 鉴权 | 写路径须显式 API Key |
+| 配件预核 | 本地 JSON，可选 mock WMS |
+| 站长确认 | 批准 / 拒绝 / 退回 |
+| 决策快照 | 记录策略版本与确认项（字段名仍兼容 `decision_certificate`） |
+| 落箱 | 单仓 `file_outbox`；联调常用 RAG mock inbox |
+| 评测 | `standalone_scorecard` 为主；联合证据包为加分 |
 
-## 未实现 / 明确不做
+## 未实现
 
-ERP/CRM 派工 · 真 WMS/SSO · Copilot 内 LLM / Multi-Agent · Redis 多 worker
+ERP/CRM 派工 · 生产 WMS/SSO · 本仓内 LLM · 多 worker 生产部署（演示固定单 worker）
 
-## 运行模式
+## 运行配置
 
-| 模式 | 配置 |
+| 模式 | 做法 |
 |------|------|
-| **单仓自立（主）** | `copy .env.standalone .env` → `COPILOT_RUNTIME_MODE=standalone` · `DEMO_OFFLINE=1` · `SUBMIT_DESTINATION=file_outbox` |
-| **答辩 Live（加分）** | `copy .env.demo .env` → `REQUIRE_LIVE=1` · `RAG_AUTO_FALLBACK=0` · 通常 `rag_mock_inbox` |
-| **开发试错** | 可临时 `RAG_AUTO_FALLBACK=1`（**勿当** Live / Portfolio） |
-| **伪 WMS（可选）** | `python scripts/mock_parts_wms.py` + `PARTS_LEDGER_URL=http://127.0.0.1:8011` |
+| 单仓 | `copy .env.standalone .env` |
+| 联调（真 RAG） | `copy .env.demo .env`，且 `:8001` 已就绪 |
+| 开发兜底 | 可临时 `RAG_AUTO_FALLBACK=1`（勿当作联调通过） |
+| 伪 WMS | `python scripts/mock_parts_wms.py`，配置 `PARTS_LEDGER_URL` |

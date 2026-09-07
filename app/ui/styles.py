@@ -111,8 +111,14 @@ button[data-testid="baseButton-primary"]:hover {{
 .portfolio-warn.joint {{
   background: rgba(229, 136, 137, 0.1);
 }}
+.portfolio-warn.unreachable {{
+  background: rgba(44, 51, 44, 0.06);
+  border-color: rgba(44, 51, 44, 0.35);
+  border-left-color: var(--color-text);
+}}
 .portfolio-warn strong {{ color: var(--color-accent); }}
 .portfolio-warn.standalone strong {{ color: var(--color-primary); }}
+.portfolio-warn.unreachable strong {{ color: var(--color-text); }}
 .portfolio-warn .tier {{
   display: block;
   margin-top: 0.25rem;

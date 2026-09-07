@@ -1,9 +1,9 @@
 """Product naming SSOT — UI、OpenAPI 与文档口径统一。
 
 本地/历史目录名 ``aftersales-dispatch-copilot`` 含 ``dispatch`` 字样，仅为路径标识。
-推荐对外 GitHub 仓库名：``aftersales-ticket-gate``。
+GitHub：https://github.com/Linneaovo/aftersales-ticket-gate
 
-对外产品名是「报修开单门禁」，**不是** ERP 派工系统。
+对外产品名是「报修开单门禁」，不是 ERP 派工系统。
 意图枚举 ``fault_dispatch`` 同为内部历史名，UI/文档一律写「报修开单」。
 """
 
@@ -18,8 +18,10 @@ PRODUCT_ONE_LINER = (
 )
 # 本地路径标识（勿轻易改，联调脚本依赖）
 REPO_SLUG = "aftersales-dispatch-copilot"
-# 对外发布时建议使用的 GitHub 仓库名
+# 对外 GitHub
+GITHUB_OWNER = "Linneaovo"
 GITHUB_REPO = "aftersales-ticket-gate"
+GITHUB_URL = f"https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}"
 
 # —— 姊妹仓（知识层）——
 SIBLING_REPO_SLUG = "enterprise-rag"  # 本地目录名 / API service

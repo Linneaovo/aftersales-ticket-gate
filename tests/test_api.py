@@ -60,6 +60,9 @@ def test_playbooks_lane_core_default(api_client):
     assert core.get("lane") == "core"
     ids = {i["id"] for i in core.get("items") or []}
     assert ids == {"p1_xingsha_h103", "p1b_no_shortage_ready", "p8_parts_clerk_conflict"}
+    for item in core.get("items") or []:
+        assert "api_key" not in item
+        assert item.get("role_hint") in {"technician", "station_chief", "parts_clerk", "finance", "hr", None}
     ext = api_client.get("/playbooks?lane=extended").json()
     ext_ids = {i["id"] for i in ext.get("items") or []}
     assert "p6_chitchat" in ext_ids
@@ -81,7 +84,12 @@ def test_health_live_eval_from_portfolio_json(api_client):
     assert body.get("live_function_test_total") == LIVE_FUNCTION_EXPECTED_TOTAL
     assert body.get("live_integration_manual_script_version") == LIVE_MANUAL_SCRIPT_VERSION
     assert body.get("live_function_test_script_version") == LIVE_FUNCTION_SCRIPT_VERSION
-    assert body.get("live_eval_all_ok") is True
+    # 离线 FakeRag：artifacts 可读，但 live_eval_all_ok 须 runtime-gated=false
+    assert body.get("live_eval_source") == "committed_json"
+    assert body.get("live_eval_artifacts_ok") is True
+    assert body.get("live_eval_all_ok") is False
+    assert body.get("live_eval_runtime_gated") is True
+    assert body.get("linkage_claim") == "none"
     assert not body.get("live_eval_stale")
     assert "orchestration" in body
     assert body["orchestration"].get("llm_location") == "enterprise-rag_only_when_http"
@@ -118,7 +126,10 @@ def test_create_run_waiting_hitl(api_client):
     assert body.get("work_order_draft")
     run_id = body["run_id"]
 
-    trace = api_client.get(f"/runs/{run_id}/trace")
+    trace = api_client.get(
+        f"/runs/{run_id}/trace",
+        headers={"X-API-Key": "demo-technician"},
+    )
     assert trace.status_code == 200
     events = trace.json().get("events") or []
     nodes = [e["node"] for e in events]
@@ -270,7 +281,10 @@ def test_cancel_run_forbidden_for_technician(api_client):
 
 
 def test_get_run_not_found(api_client):
-    assert api_client.get("/runs/nonexistent").status_code == 404
+    assert (
+        api_client.get("/runs/nonexistent", headers={"X-API-Key": "demo-technician"}).status_code
+        == 404
+    )
 
 
 def test_policies_list(api_client):
@@ -300,8 +314,9 @@ def test_trace_public_view_redacts_events(api_client):
         json=_HITL_RUN_JSON,
     )
     run_id = create.json()["run_id"]
-    full = api_client.get(f"/runs/{run_id}/trace")
-    public = api_client.get(f"/runs/{run_id}/trace?view=public")
+    hdr = {"X-API-Key": "demo-technician"}
+    full = api_client.get(f"/runs/{run_id}/trace", headers=hdr)
+    public = api_client.get(f"/runs/{run_id}/trace?view=public", headers=hdr)
     assert len(full.json().get("events") or []) > 0
     assert public.json().get("events") == []
     assert public.json().get("view_mode") == "public"
@@ -314,7 +329,10 @@ def test_run_public_view_hides_trace_preview(api_client):
         json=_HITL_RUN_JSON,
     )
     run_id = create.json()["run_id"]
-    body = api_client.get(f"/runs/{run_id}?view=public").json()
+    body = api_client.get(
+        f"/runs/{run_id}?view=public",
+        headers={"X-API-Key": "demo-technician"},
+    ).json()
     assert body.get("trace_events") == []
     assert body.get("trace_preview") == []
 
@@ -442,7 +460,7 @@ def test_runs_list_after_create(api_client):
         json={"question": "H103是什么意思"},
     )
     run_id = create.json()["run_id"]
-    resp = api_client.get("/runs?limit=50")
+    resp = api_client.get("/runs?limit=50", headers={"X-API-Key": "demo-technician"})
     assert resp.status_code == 200
     ids = [r["run_id"] for r in resp.json().get("items") or []]
     assert run_id in ids
@@ -456,7 +474,7 @@ def test_run_persist_and_reload(api_client):
     )
     run_id = create.json()["run_id"]
     assert create.json()["status"] == "succeeded"
-    get_resp = api_client.get(f"/runs/{run_id}")
+    get_resp = api_client.get(f"/runs/{run_id}", headers={"X-API-Key": "demo-technician"})
     assert get_resp.status_code == 200
     body = get_resp.json()
     assert body["status"] == "succeeded"
@@ -521,11 +539,39 @@ def test_block_runs_when_live_required_and_rag_down(isolated_env, monkeypatch):
 
 
 def test_persistence_audit_endpoint(api_client):
-    resp = api_client.get("/persistence/audit")
+    denied = api_client.get("/persistence/audit")
+    assert denied.status_code == 401
+    resp = api_client.get("/persistence/audit", headers={"X-API-Key": "demo-technician"})
     assert resp.status_code == 200
     body = resp.json()
     assert "healthy" in body
     assert "orphan_checkpoints" in body
+
+
+def test_missing_api_key_rejected_on_runs(api_client):
+    """省略 X-API-Key / body.api_key → 401，不得静默回落默认演示 Key。"""
+    resp = api_client.post("/runs", json={"question": "H103是什么意思"})
+    assert resp.status_code == 401
+    assert "API Key" in (resp.json().get("detail") or "")
+
+
+def test_body_api_key_without_header_accepted(api_client):
+    """body.api_key 显式提供时可不带 Header。"""
+    resp = api_client.post(
+        "/runs",
+        json={"question": "你好呀在吗哈哈", "api_key": "demo-technician"},
+    )
+    assert resp.status_code == 200
+    assert resp.json().get("status") == "rejected"
+
+
+def test_playbook_run_uses_embedded_key_without_header(api_client):
+    """剧本 JSON 内嵌 api_key 可作为 body_key；仍不算匿名默认。"""
+    resp = api_client.post("/playbooks/p6_chitchat/run")
+    assert resp.status_code == 200
+    # P6 闲聊拒答：认证已过，业务为 rejected
+    assert resp.json().get("status") == "rejected"
+    assert resp.json().get("intent") == "chitchat"
 
 
 def test_offline_fallback_when_rag_down(isolated_env, monkeypatch):

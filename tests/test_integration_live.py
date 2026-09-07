@@ -1,4 +1,8 @@
-"""可选 live 集成测试：需 enterprise-rag :8001 + Copilot :8002 运行。"""
+"""可选 L2 live 集成测试：需真 enterprise-rag :8001 + Copilot :8002（非 L1 契约桩）。
+
+L1 Compose stub（evidence_tier=L1 / mode=contract_stub）会使 rag_mode=live，
+但本文件不算 Live；应 skip。L1 契约请用 linkage-l1 / run_l1_linkage。
+"""
 
 from __future__ import annotations
 
@@ -16,12 +20,32 @@ PARTS = {"X-API-Key": "demo-parts", "Content-Type": "application/json"}
 _HEALTH_PROBE_TIMEOUT = 15.0
 
 
-def _rag_up() -> bool:
+def _rag_health() -> dict | None:
     try:
         r = httpx.get(f"{RAG_BASE}/health", timeout=_HEALTH_PROBE_TIMEOUT)
-        return r.status_code == 200
+        if r.status_code != 200:
+            return None
+        body = r.json() if r.content else {}
+        return body if isinstance(body, dict) else {}
     except Exception:
+        return None
+
+
+def _rag_is_l2_live(rag: dict) -> bool:
+    """拒绝 L1 契约桩；真 RAG 常无 evidence_tier，但 mode 不得为 contract_stub。"""
+    tier = str(rag.get("evidence_tier") or "").strip().upper()
+    mode = str(rag.get("mode") or "").strip().lower()
+    if tier == "L1" or mode == "contract_stub":
         return False
+    if tier == "L2":
+        return True
+    # 无 tier 的真服务：只要不是 stub 即允许本文件探测
+    return mode != "contract_stub"
+
+
+def _rag_up() -> bool:
+    rag = _rag_health()
+    return rag is not None and _rag_is_l2_live(rag)
 
 
 def _copilot_up() -> bool:
@@ -33,14 +57,20 @@ def _copilot_up() -> bool:
 
 
 def _copilot_live_ready() -> bool:
-    """Copilot 须 Live 配置（非 Standalone / demo_offline），否则 integration 应 skip。"""
+    """Copilot 须 Live 配置，且 linkage_claim 不得为 L1（防 stub 冒充）。"""
     try:
         body = httpx.get(f"{COPILOT_BASE}/health", headers=TECH, timeout=_HEALTH_PROBE_TIMEOUT).json()
     except Exception:
         return False
     if body.get("runtime_mode") == "standalone" or body.get("demo_offline"):
         return False
-    return body.get("rag_mode") == "live"
+    if body.get("rag_mode") != "live":
+        return False
+    claim = str(body.get("linkage_claim") or "").strip().lower()
+    if claim in {"l1", "none"}:
+        return False
+    # http_live / L2 / 空（旧二进制）均可；再靠 RAG health 排除 stub
+    return True
 
 
 def _live_stack_up() -> bool:
@@ -48,7 +78,8 @@ def _live_stack_up() -> bool:
 
 
 _LIVE_SKIP_REASON = (
-    "Live 联调未就绪：需 :8001+:8002，且 copy .env.demo .env 后重启 Copilot（非 standalone/demo_offline）"
+    "L2 Live 未就绪：需真 :8001+:8002（非 L1 contract_stub），"
+    "copy .env.demo .env 后重启 Copilot（非 standalone/demo_offline）"
 )
 
 
@@ -57,9 +88,12 @@ _LIVE_SKIP_REASON = (
 def test_live_health_engine_and_rag_mode():
     rag = httpx.get(f"{RAG_BASE}/health", timeout=10.0)
     assert rag.status_code == 200
+    rag_body = rag.json()
+    assert _rag_is_l2_live(rag_body if isinstance(rag_body, dict) else {})
     body = httpx.get(f"{COPILOT_BASE}/health", headers=TECH, timeout=10.0).json()
     assert body.get("engine") == "langgraph"
     assert body.get("rag_mode") == "live"
+    assert str(body.get("linkage_claim") or "").lower() != "l1"
 
 
 @pytest.mark.integration

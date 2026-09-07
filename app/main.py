@@ -115,12 +115,45 @@ app.add_middleware(
 
 
 def _resolve_key(body_key: str | None, header_key: str | None) -> str:
-    settings = get_settings()
-    raw = (body_key or header_key or settings.api_key).strip()
+    """须显式提供 Key（Header 或 body）；禁止静默回落 settings.api_key。
+
+    剧本路径可传 playbook 内嵌 api_key 作为 body_key。省略 ≠ 匿名默认演示 Key。
+    """
+    raw = (body_key or header_key or "").strip()
+    if not raw:
+        raise HTTPException(
+            401,
+            "须提供 API Key（X-API-Key 或 body.api_key）；省略不等于匿名默认 Key",
+        )
     try:
         return assert_known_api_key(raw)
     except ValueError as exc:
         raise HTTPException(401, str(exc)) from exc
+
+
+def _linkage_claim_from_rag(
+    *,
+    runtime_mode: str,
+    rag_mode: str,
+    rag_status: dict[str, Any],
+    demo_offline: bool,
+) -> tuple[str | None, str | None, str]:
+    """从上游 RAG /health 推导证据层标签（L1 stub ≠ L2 live）。"""
+    payload = rag_status.get("payload") if isinstance(rag_status.get("payload"), dict) else {}
+    tier = payload.get("evidence_tier")
+    upstream_mode = payload.get("mode")
+    tier_s = str(tier).strip() if tier is not None else None
+    mode_s = str(upstream_mode).strip() if upstream_mode is not None else None
+    if demo_offline or runtime_mode == "standalone" or rag_mode != "live":
+        return tier_s, mode_s, "none"
+    if not rag_status.get("ok"):
+        return tier_s, mode_s, "none"
+    if tier_s == "L1" or mode_s == "contract_stub":
+        return tier_s or "L1", mode_s, "L1"
+    if tier_s == "L2":
+        return tier_s, mode_s, "L2"
+    # 真 RAG 常无 evidence_tier：仅表示 HTTP live，不自动升格 L2
+    return tier_s, mode_s, "http_live"
 
 
 def _resolve_role(
@@ -351,7 +384,25 @@ def health() -> dict[str, Any]:
     elif not runtime_live_ok:
         live_meta["joint_evidence_live_verified"] = False
 
+    # live_*.json 是仓内 artifacts，≠ 当场联调；仅 runtime live 才透出 live_eval_all_ok=true
+    if "live_eval_all_ok" in live_meta or "live_eval_summary" in live_meta:
+        artifacts_ok = bool(live_meta.get("live_eval_all_ok"))
+        live_meta["live_eval_artifacts_ok"] = artifacts_ok
+        live_meta["live_eval_source"] = "committed_json"
+        if runtime_live_ok:
+            live_meta["live_eval_all_ok"] = artifacts_ok
+            live_meta.pop("live_eval_runtime_gated", None)
+        else:
+            live_meta["live_eval_all_ok"] = False
+            live_meta["live_eval_runtime_gated"] = True
+
     runtime_mode = resolve_runtime_mode(settings)
+    rag_evidence_tier, rag_upstream_mode, linkage_claim = _linkage_claim_from_rag(
+        runtime_mode=runtime_mode,
+        rag_mode=rag_mode,
+        rag_status=rag_status,
+        demo_offline=bool(settings.demo_offline),
+    )
     submit_dest = submit_destination_name(settings)
     if settings.demo_offline:
         knowledge_port = "fixture"
@@ -418,6 +469,9 @@ def health() -> dict[str, Any]:
         "parts_ledger_sha256": ledger_fp.get("parts_ledger_sha256"),
         "parts_item_count": ledger_fp.get("parts_item_count"),
         "rag_contract_version": CONTRACT_VERSION,
+        "rag_evidence_tier": rag_evidence_tier,
+        "rag_upstream_mode": rag_upstream_mode,
+        "linkage_claim": linkage_claim,
         "live_rag_contract_check": contract_summary,
         **live_meta,
         "rag": rag_status,
@@ -498,12 +552,7 @@ def metrics_prometheus(
     if not get_settings().expose_metrics:
         raise HTTPException(404, "metrics disabled (EXPOSE_METRICS=0)")
     if get_settings().require_known_api_key:
-        if not (x_api_key or "").strip():
-            raise HTTPException(401, "须 X-API-Key（已知演示 Key）")
-        try:
-            assert_known_api_key(x_api_key)
-        except ValueError as exc:
-            raise HTTPException(401, str(exc)) from exc
+        _resolve_key(None, x_api_key)
     counts = run_status_counts()
     total = sum(counts.values())
     hitl_wait = counts.get("waiting_hitl", 0)
@@ -535,14 +584,18 @@ def metrics_prometheus(
             lines.append(f'copilot_submit_gate_blocked_total{{error_code="{code}"}} {n}')
     live_eval = _read_live_eval_meta()
     if live_eval.get("live_eval_at"):
+        artifacts_ok = bool(live_eval.get("live_eval_all_ok"))
         lines.extend(
             [
                 "# HELP copilot_live_eval_at Unix timestamp of latest live_*.json eval artifact",
                 "# TYPE copilot_live_eval_at gauge",
                 f"copilot_live_eval_at {int(live_eval['live_eval_at'])}",
-                "# HELP copilot_live_eval_all_ok Whether all committed live eval JSONs report all_ok",
+                "# HELP copilot_live_eval_artifacts_ok Whether committed live_*.json artifacts report all_ok (≠ runtime live)",
+                "# TYPE copilot_live_eval_artifacts_ok gauge",
+                f"copilot_live_eval_artifacts_ok {1 if artifacts_ok else 0}",
+                "# HELP copilot_live_eval_all_ok Deprecated alias of artifacts_ok; prefer copilot_live_eval_artifacts_ok",
                 "# TYPE copilot_live_eval_all_ok gauge",
-                f"copilot_live_eval_all_ok {1 if live_eval.get('live_eval_all_ok') else 0}",
+                f"copilot_live_eval_all_ok {1 if artifacts_ok else 0}",
             ]
         )
     return PlainTextResponse("\n".join(lines) + "\n", media_type="text/plain; version=0.0.4")
@@ -680,7 +733,7 @@ def decide_hitl(
         raise HTTPException(404, "run 不存在")
     if state.get("status") != "waiting_hitl":
         raise HTTPException(409, f"当前状态不可人确: {state.get('status')}")
-    key = _resolve_key(None, x_api_key) or str(state.get("api_key") or "")
+    key = _resolve_key(None, x_api_key)
     if not is_station_chief(api_key=key):
         role = role_from_api_key(key)
         raise HTTPException(
@@ -748,6 +801,7 @@ def _playbooks_dir() -> Path:
 def list_playbooks(
     lane: str = Query(default="core", description="core=主路径；extended=全部；all=同 extended"),
 ) -> dict[str, Any]:
+    """列表不回传明文 api_key（仓库 JSON 仍保留；跑剧本时 Header 或剧本内嵌均可）。"""
     items = []
     root = _playbooks_dir()
     lane_norm = (lane or "core").strip().lower()
@@ -756,12 +810,13 @@ def list_playbooks(
             if lane_norm == "core" and path.stem not in CORE_PLAYBOOK_IDS:
                 continue
             data = json.loads(path.read_text(encoding="utf-8"))
+            pb_key = str(data.get("api_key") or "").strip() or None
             items.append(
                 {
                     "id": path.stem,
                     "title": data.get("title") or path.stem,
                     "question": data.get("question"),
-                    "api_key": data.get("api_key"),
+                    "role_hint": role_from_api_key(pb_key) if pb_key else None,
                     "expect_status": data.get("expect_status"),
                     "station": data.get("station"),
                     "lane": "core" if path.stem in CORE_PLAYBOOK_IDS else "extended",

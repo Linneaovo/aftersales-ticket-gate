@@ -44,6 +44,7 @@ jobs:
           python scripts/run_hitl_gate_eval.py
           python scripts/run_intent_eval.py
           python scripts/build_governance_scorecard.py --profile standalone
+          python scripts/build_governance_scorecard.py
           python scripts/check_eval_git_sha.py
           python scripts/check_rag_contract_drift.py
 

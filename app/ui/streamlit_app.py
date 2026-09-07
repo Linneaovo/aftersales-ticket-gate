@@ -521,8 +521,20 @@ def _render_step_row(run: dict | None, health: dict) -> None:
 
 
 def _render_mode_banner(health: dict) -> None:
-    runtime_mode = str(health.get("runtime_mode") or "")
-    if runtime_mode == "standalone":
+    from app.ui.health_banner import mode_banner_kind
+
+    kind = mode_banner_kind(health)
+    if kind == "unreachable":
+        st.markdown(
+            '<div class="portfolio-warn unreachable">'
+            "<strong>API 不可达</strong> · 无法读取 /health"
+            f' · 请确认 Copilot 已在 <code>{html.escape(COPILOT_URL)}</code> 启动'
+            '<span class="tier">单仓：start_standalone.cmd · 勿把本状态说成联调</span>'
+            "</div>",
+            unsafe_allow_html=True,
+        )
+        return
+    if kind == "standalone":
         st.markdown(
             '<div class="portfolio-warn standalone">'
             "<strong>单仓演示</strong> · 内置知识 · 本地落箱"
@@ -532,10 +544,19 @@ def _render_mode_banner(health: dict) -> None:
         return
     rag = health.get("rag") or {}
     rag_ok = bool(rag.get("ok")) and str(health.get("rag_mode") or "") == "live"
+    if kind == "l1":
+        st.markdown(
+            '<div class="portfolio-warn joint">'
+            "<strong>L1 契约联调</strong> · HTTP 桩可达 · 证契约不证检索 · 不得称 live_verified"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+        return
     rag_txt = "知识库已连接" if rag_ok else "知识库未就绪"
+    label = "L2 Live" if kind == "l2" else "联调模式"
     st.markdown(
         '<div class="portfolio-warn joint">'
-        f"<strong>联调模式</strong> · {html.escape(rag_txt)} · 开单须站长确认"
+        f"<strong>{html.escape(label)}</strong> · {html.escape(rag_txt)} · 开单须站长确认"
         f' · <a class="mode-link" href="{html.escape(RAG_UI_URL)}" target="_blank">知识库</a>'
         "</div>",
         unsafe_allow_html=True,
@@ -779,7 +800,8 @@ with st.sidebar:
         _runtime_mode = str(health.get("runtime_mode") or "dev")
     except Exception as exc:  # noqa: BLE001
         st.error(f"服务连不上：{exc}")
-        health = {}
+        # 哨兵：避免空 dict 被模式横幅误判为「联调模式」
+        health = {"_ui_unreachable": True}
 
     try:
         playbooks = api("GET", "/playbooks?lane=core", api_key).get("items") or []
@@ -845,6 +867,10 @@ with st.sidebar:
                 {
                     "runtime_mode": health.get("runtime_mode"),
                     "rag_mode": health.get("rag_mode"),
+                    "linkage_claim": health.get("linkage_claim"),
+                    "rag_evidence_tier": health.get("rag_evidence_tier"),
+                    "live_eval_artifacts_ok": health.get("live_eval_artifacts_ok"),
+                    "live_eval_all_ok": health.get("live_eval_all_ok"),
                     "submit_destination": health.get("submit_destination"),
                     "version": health.get("version"),
                 }

@@ -1,14 +1,14 @@
 {
   "schema": "joint_evidence_pack/v1",
-  "generated_at": "2026-09-01T11:36:46.862960+00:00",
-  "git_sha": "bbdb43c",
-  "mode": "from_artifacts",
-  "evidence_tier": "artifacts",
-  "live_verified": false,
+  "generated_at": "2026-09-07T10:20:24.398469+00:00",
+  "git_sha": "f91d819",
+  "mode": "live",
+  "evidence_tier": "L2",
+  "live_verified": true,
   "l1_verified": false,
-  "portfolio_claimable": false,
-  "parts_gate_ab_live_ok": false,
-  "portfolio_warning": "artifacts_only：仅合并历史 live_*.json，未当场探测 :8001/:8002。evidence_tier=artifacts，永不可称 L2；请 --live（L2）或 run_l1_linkage（L1）。",
+  "portfolio_claimable": true,
+  "parts_gate_ab_live_ok": true,
+  "portfolio_warning": null,
   "hosts": {
     "rag": "http://127.0.0.1:8001",
     "copilot": "http://127.0.0.1:8002"
@@ -48,8 +48,8 @@
     "L0_pytest_fakerag": "offline orchestration only; not HTTP linkage",
     "L1_compose_contract": "linkage-l1.yml / docker-compose.joint.yml；证契约不证检索",
     "L2_live_rag": "live-linkage.yml self-hosted/dispatch；须 live_verified",
-    "pytest_offline_collect": 366,
-    "pytest_full_collect": 374,
+    "pytest_offline_collect": 376,
+    "pytest_full_collect": 384,
     "live_json": "necessary but not sufficient without live_verified + evidence_tier=L2",
     "ci_l2_live": "live-linkage.yml default off (no GH-hosted Ollama)",
     "from_artifacts": "never L2"
@@ -62,8 +62,8 @@
     "checklist_hash": "28cc2ef867c3"
   },
   "live_function_test": {
-    "all_ok": true,
-    "passed": 29,
+    "all_ok": false,
+    "passed": 28,
     "total": 29,
     "script_version": "2026-08-28.p0",
     "checklist_hash": "d91c86f71ce4"
@@ -77,11 +77,42 @@
       "schema": "parts_gate_ab/v1"
     },
     "live": {
-      "present": false,
-      "all_ok": false,
+      "present": true,
+      "all_ok": true,
       "rag_mode": "live",
-      "schema": null,
-      "skip_reason": "from_artifacts_only_no_live_ab"
+      "schema": "parts_gate_ab_live/v1",
+      "cases": {
+        "A_p1_xingsha_h103": {
+          "playbook": "p1_xingsha_h103",
+          "result": {
+            "status": "waiting_hitl",
+            "rag_client_mode": "live",
+            "shortage": true,
+            "has_pol_parts_01": true,
+            "policy_ids": [
+              "POL-PARTS-01"
+            ],
+            "hitl_reasons": [
+              "[POL-PARTS-01] 配件缺料须人确调拨或改约: 建议：经开备件周转点调拨 · 预计 4h · DEMO电话 000-DEMO-5600（虚构演示热线，非任何真实服务站号码）"
+            ]
+          },
+          "expect": "waiting_hitl + POL-PARTS-01 + shortage",
+          "passed": true
+        },
+        "B_p1b_no_shortage_ready": {
+          "playbook": "p1b_no_shortage_ready",
+          "result": {
+            "status": "succeeded",
+            "rag_client_mode": "live",
+            "shortage": false,
+            "has_pol_parts_01": false,
+            "policy_ids": [],
+            "hitl_reasons": []
+          },
+          "expect": "no POL-PARTS-01",
+          "passed": true
+        }
+      }
     },
     "all_ok": true,
     "rag_mode": "nested",
@@ -121,22 +152,63 @@
   ],
   "governance_scorecard_ref": "data/eval/governance_scorecard.json",
   "joint_failure_drill_ref": "data/eval/joint_failure_drill.json",
+  "live_probe": {
+    "rag_health": true,
+    "consumer_contract_version_supported": "2026-08-29.1",
+    "rag_mode": null,
+    "rag_evidence_tier": null,
+    "copilot_rag_mode": "live",
+    "demo_mode_warning": false,
+    "live_eval_all_ok": false,
+    "parts_ledger_sha256": "4e53fc2760ad",
+    "rag_contract_version": "2026-08-29.1",
+    "contract_version_match": true,
+    "expected_contract_version": "2026-08-29.1"
+  },
+  "live_sample_p1": {
+    "status": "waiting_hitl",
+    "rag_client_mode": "live",
+    "certificate_phase": "pending",
+    "certificate_assurance": "state_snapshot_not_tamper_proof",
+    "policy_ids": [
+      "POL-PARTS-01"
+    ],
+    "policy_catalog_version": "2026-08-28.opt2",
+    "is_production_ticket": false,
+    "hints_source": "rag_draft",
+    "demo_injected_hints": false,
+    "shortage": true,
+    "after_approve": {
+      "status": "succeeded",
+      "destination": "rag_mock_inbox",
+      "is_production_ticket": false,
+      "certificate_phase": "resolved",
+      "ticket_id": "LOCAL-D1419A4EE6",
+      "submitted_by": "copilot",
+      "source": "copilot_hitl",
+      "run_id": "0b12e14967e1",
+      "inbox_source": "copilot_hitl",
+      "inbox_run_id": "0b12e14967e1"
+    },
+    "ownership_ok": true
+  },
+  "claim_matrix_ref": "app/eval/evidence_tier.py::CLAIM_MATRIX",
   "synergy_checks": {
     "schema": "synergy_checks/v1",
-    "required_ok": false,
+    "required_ok": true,
     "checks": [
       {
         "id": "draft_then_gate",
         "failure_mode": "F1",
         "required": true,
-        "ok": false,
+        "ok": true,
         "detail": "P1 live sample must hit POL-PARTS-01 after draft/parts"
       },
       {
         "id": "hitl_then_inbox",
         "failure_mode": "F2",
         "required": true,
-        "ok": false,
+        "ok": true,
         "detail": "approve → submit → inbox source=copilot_hitl + run_id"
       },
       {
@@ -150,14 +222,14 @@
         "id": "parts_ab_live",
         "failure_mode": "F4",
         "required": true,
-        "ok": false,
+        "ok": true,
         "detail": "parts_gate_ab.offline + .live both all_ok"
       },
       {
         "id": "contract_aligned",
         "failure_mode": "F5",
         "required": true,
-        "ok": false,
+        "ok": true,
         "detail": "RAG consumer_contract_version_supported == Copilot CONTRACT_VERSION"
       },
       {
@@ -176,11 +248,11 @@
       }
     ],
     "failure_mode_coverage": {
-      "F1": false,
-      "F2": false,
+      "F1": true,
+      "F2": true,
       "F3": true,
-      "F4": false,
-      "F5": false,
+      "F4": true,
+      "F5": true,
       "F6": true,
       "F8": true
     },
@@ -194,15 +266,15 @@
         "F6",
         "F8"
       ],
-      "covered": 3,
+      "covered": 7,
       "total": 7,
-      "ratio": 0.42857142857142855
+      "ratio": 1.0
     }
   },
   "governance_scorecard": {
     "present": true,
     "all_ok": true,
-    "generated_at": "2026-08-31T08:55:49.076488+00:00"
+    "generated_at": "2026-09-07T07:12:21.968746+00:00"
   },
   "joint_failure_drill": {
     "present": true,

@@ -4,25 +4,28 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](requirements.txt)
 [![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white)](.github/workflows/ci.yml)
 
-售后报修里，知识侧可以先给出带证据的草稿；真正麻烦的是开单前：谁能提交、缺料或制度冲突要不要拦、提交记在谁名下。本仓做这件事——开单门禁编排，不是 ERP 派工，也不在仓内做向量检索或调 LLM。
+报修开单前要解决的是：谁可以提交、缺料或制度冲突要不要拦、提交记在谁名下。本仓库做这件事——门禁编排与站长确认。
 
-检索 / 生成在姊妹仓（产品名：售后知识治理 Copilot，本地目录 `enterprise-rag`）。本仓默认 Standalone：Fixture 假知识源 + 本仓 `file_outbox`，clone 下来就能跑，不必先起姊妹仓。L1 / L2 联调是加分项。
+检索和生成在姊妹仓 `enterprise-rag`（售后知识治理 Copilot）。本仓默认单仓可跑：本地 Fixture 知识源 + `file_outbox`，不必先起姊妹仓。接上真知识仓或契约桩属于联调加分。
 
-个人求职项目（作者 linnea，2026-08）。我主要写了 LangGraph 编排、五条 POL 门禁、站长确认（HITL）、配件预核反证，以及 L0/L1/L2 证据分层和 CI。
+个人求职项目（linnea，2026-08）。仓库：https://github.com/Linneaovo/aftersales-ticket-gate  
+产品英文名 *After-Sales Ticket Gate Copilot*；本地目录仍可能是历史名 `aftersales-dispatch-copilot`。落箱一律 `is_production_ticket=false`。
 
-产品英文名 *After-Sales Ticket Gate Copilot*；本地目录可能仍是历史名 `aftersales-dispatch-copilot`，建议 GitHub 名 `aftersales-ticket-gate`。落箱一律 `is_production_ticket=false`。
+相关文档：[双仓](docs/DUAL_REPO.md) · [范围](docs/STANDALONE_SCOPE.md) · [边界](docs/BOUNDARY.md) · [演示](DEMO_SCRIPT.md) · [架构](ARCHITECTURE.md) · [契约](docs/RAG_COPILOT_CONTRACT.md)
 
-文档：[双仓](docs/DUAL_REPO.md) · [说明](docs/OVERVIEW.md) · [自立范围](docs/STANDALONE_SCOPE.md) · [演示](DEMO_SCRIPT.md) · [架构](ARCHITECTURE.md) · [契约](docs/RAG_COPILOT_CONTRACT.md)
+## 做什么 / 不做什么
 
-## 设计取舍
+| 做 | 不做 |
+|----|------|
+| 规则意图、策略门禁、配件预核、站长确认、决策快照、可插拔落箱 | ERP 派工、真 WMS/SSO、仓内向量检索或调 LLM |
+| 改台账库存即可对照缺料门禁是否触发（剧本 P1 / P1b） | 用制度冲突替站长做裁决 |
+| 单仓自立；联调分 L1（契约桩）与 L2（真模型） | 把离线测试或契约桩说成真模型联调 |
 
-- 改 JSON 配件台账的 stock，缺料门禁（POL-PARTS）触发 / 不触发可以对着演（剧本 P1 / P1b）。
-- Standalone 不依赖 `:8001`；L1 只证 HTTP 契约；只有 L2 才标 `live_verified`，避免把假联调说成 Live。
-- 质保冲突只并列展示，系统不替站长裁决；Decision Snapshot（决策快照）记下策略版本和确认层，不是防篡改审计中台。
+决策快照记录策略版本与确认项，方便回放；不是防篡改审计系统。Streamlit（`:8502`）是联调/演示台，不是站长作业端。
 
-## 演示路径
+## 主流程
 
-约 6 分钟：缺料问句 → 待站长确认 → 批准 → Outbox。口播见 [DEMO_SCRIPT.md](DEMO_SCRIPT.md)。
+约 6 分钟可走通：缺料问句 → 待站长确认 → 批准 → Outbox（单仓）或 RAG mock inbox（联调）。
 
 ```mermaid
 flowchart LR
@@ -30,8 +33,8 @@ flowchart LR
   I --> D[知识草稿]
   D --> QC[质检]
   QC --> P[配件预核]
-  P --> G{POL 门禁}
-  G -->|缺料 / 冲突 / 角色等| H[站长确认]
+  P --> G{门禁}
+  G -->|缺料 / 冲突等| H[站长确认]
   G -->|可过| C[决策快照]
   H --> C
   C --> S[落箱]
@@ -40,69 +43,29 @@ flowchart LR
 | | |
 |--|--|
 | ![待站长确认](docs/assets/demo-hitl-pending.png) | 缺料 → 待站长确认 |
-| ![站长批准](docs/assets/demo-hitl-approve.png) | 站长勾选缺料确认后批准 |
+| ![站长批准](docs/assets/demo-hitl-approve.png) | 站长勾选确认后批准 |
 | ![Outbox 落箱](docs/assets/demo-outbox.png) | 审批留痕与提交记录 |
 
-复拍：`python scripts/capture_demo_screenshots.py`（需 `:8002` + `:8502`）。
+复拍截图：`python scripts/capture_demo_screenshots.py`（需 `:8002` + `:8502`）。步骤见 [DEMO_SCRIPT.md](DEMO_SCRIPT.md)。
 
-## 技术栈
+## 技术栈与规模
 
-FastAPI · LangGraph（含 SQLite checkpoint）· Pydantic v2 · Streamlit · httpx · pytest · Docker Compose · GitHub Actions
+FastAPI · LangGraph（SQLite checkpoint）· Pydantic v2 · Streamlit · httpx · pytest · Docker Compose · GitHub Actions
 
-## 目录
+| 项 | 数量 / 版本 |
+|----|-------------|
+| 剧本 | 12（`data/playbooks/`） |
+| 主路径策略 | 5（`CORE_POLICIES`，目录版 `2026-08-28.opt2`） |
+| 测试模块 | 43 × `tests/test_*.py` |
+| 消费方契约 | `2026-08-29.1`（须与 RAG `/health.consumer_contract_version_supported` 一致） |
+| pytest 收集数 | 见 `app/eval/ssot.py`（文档不写死） |
 
-- [设计取舍](#设计取舍)
-- [演示路径](#演示路径)
-- [技术栈](#技术栈)
-- [仓库规模](#仓库规模)
-- [主流程](#主流程)
-- [职责边界](#职责边界)
-- [环境要求](#环境要求)
-- [快速开始](#快速开始)
-- [验证分层](#验证分层)
-- [场景与策略](#场景与策略)
-- [范围与局限](#范围与局限)
-- [作者](#作者)
+检索 MRR 等指标在姊妹仓，不在本仓宣称。
 
-## 仓库规模
-
-产品侧：
-
-| 项 | 数 | 出处 |
-|----|----|------|
-| 剧本 | 12 | `data/playbooks/` |
-| 主路径策略 | 5 | `CORE_POLICIES` · 目录版 `2026-08-28.opt2` |
-| 测试模块 | 42 × `tests/test_*.py` | 仓库 |
-
-工程侧：
-
-| 项 | 数 | 出处 |
-|----|----|------|
-| 消费方契约 | `2026-08-29.1` | `app/tools/rag_contract.py` |
-| L1 联调产物 | `l1_verified=true` 且 `live_verified=false` | `data/eval/l1_linkage_report.json` · `linkage-l1.yml` |
-| pytest collect | 见 `PYTEST_*_COLLECT` | [`app/eval/ssot.py`](app/eval/ssot.py)（文档不写死数字） |
-
-以上是门禁与契约规模，不是检索 MRR；检索指标在姊妹仓。
-
-## 主流程
-
-站长确认即 HITL；决策快照记录策略版本与确认层。Standalone 落本仓 `file_outbox`；联调可落 RAG `rag_mock_inbox`。主引擎 LangGraph，fallback 只做异常容灾。Streamlit `:8502` 是联调台，不是站长作业端。
-
-## 职责边界
-
-| | 本仓 | `enterprise-rag`（可选） |
-|--|------|--------------------------|
-| 角色 | 行动层：门禁 / 人确 / 快照 / submit | 知识层：检索 / 生成 / ACL / 冲突并列 |
-| Standalone | Fixture + `file_outbox`，无需姊妹仓 | 不需要 |
-| 联调 | HTTP 消费 `:8001` | 提供 ask / draft / inbox |
-
-契约须对齐：本仓 `CONTRACT_VERSION` 与 RAG `/health.consumer_contract_version_supported` 同为 `2026-08-29.1`。
-
-## 环境要求
+## 环境
 
 - Python 3.11+（建议与 CI 一致）
-- Windows 可用根目录 `*.cmd`；Linux / macOS 用下方 `python` / `docker compose`
-- 依赖：`pip install -r requirements.txt`（`start_standalone.cmd` 会建 `.venv` 并安装）
+- Windows 可用根目录 `*.cmd`；其他平台用下方命令
 
 ```text
 python -m venv .venv
@@ -113,17 +76,14 @@ copy .env.standalone .env         # Linux/macOS: cp .env.standalone .env
 
 ## 快速开始
 
-第一次建议只跑 Standalone：无 GPU、不依赖 `enterprise-rag`。
-
 | 入口 | 用途 |
 |------|------|
-| `start_standalone.cmd` | Fixture + `file_outbox`，无需 `:8001`；UI `:8502` |
-| `run_l1_linkage.cmd` / 下方 Compose | L1 契约联调（无 GPU，与默认 CI 同路径） |
-| `start_all.cmd` | L2：需本机真 RAG `:8001`（含模型）已就绪 |
-| `start_copilot_live.cmd` | 仅起 Copilot（`.env.demo`），RAG 另启 |
-| `run_responsibility_chain.cmd` | 责任链 + 证据包（双服务已就绪） |
+| `start_standalone.cmd` | 单仓：Fixture + `file_outbox`，UI `:8502` |
+| `run_l1_linkage.cmd` | L1 契约联调（Compose 桩，无 GPU） |
+| `start_copilot_live.cmd` / `.env.demo` | 仅起本仓联调配置；真 RAG 需另启 `:8001` |
+| `run_responsibility_chain.cmd` | 双服务已就绪时的责任链与证据包 |
 
-### Standalone
+### 单仓
 
 ```text
 copy .env.standalone .env
@@ -131,40 +91,35 @@ start_standalone.cmd
 curl http://127.0.0.1:8002/health
 ```
 
-任意平台（venv 已激活）：
+应看到 `runtime_mode=standalone`、`submit_destination=file_outbox`、`linkage_claim=none`。脚本会 reset、等健康检查并跑 preflight；失败则不启 UI。改代码后请重启 `:8002`。
+
+手动：
 
 ```text
-cp .env.standalone .env   # Windows: copy
 uvicorn app.main:app --host 127.0.0.1 --port 8002
-# 另开终端：streamlit run app/ui/streamlit_app.py --server.port 8502
+streamlit run app/ui/streamlit_app.py --server.port 8502
 ```
 
-状态异常（`persistence_ok=false`，或刚改过代码）时：
+状态异常时：
 
 ```text
 python scripts/reset_demo_state.py
 python scripts/demo_preflight.py --standalone
 ```
 
-`start_standalone.cmd` 已含 reset。以 preflight 为准，勿只看 `/health.status`。改代码后重启 `:8002`，否则 `/health.version` 与源码不一致会导致 preflight 失败。
+### 离线测试（L0）
+
+本地有演示用 `.env` 也可以直接测：`tests/conftest.py` 会隔离成离线套件形态。
 
 ```bash
-python -m pytest -q
-```
-
-可选 Docker：
-
-```bash
-docker compose up --build -d
-docker compose exec api python scripts/reset_demo_state.py
-docker compose exec api python scripts/demo_preflight.py --standalone
+python -m pytest -q -m "not integration"
 ```
 
 OpenAPI：http://127.0.0.1:8002/docs · UI：http://127.0.0.1:8502
 
 ### L1 契约联调
 
-证 HTTP 契约与 submit 归属，不证检索质量。
+证明 HTTP 契约与提交归属，不证明检索质量。
 
 ```bash
 docker compose -f docker-compose.joint.yml up --build -d
@@ -172,11 +127,11 @@ docker compose -f docker-compose.joint.yml exec api python scripts/reset_demo_st
 docker compose -f docker-compose.joint.yml exec api python scripts/run_l1_linkage.py
 ```
 
-产物：`data/eval/l1_linkage_report.json`（`evidence_tier=L1`，`l1_verified=true`，`live_verified=false`）。
+产物：`data/eval/l1_linkage_report.json`（`l1_verified=true`，`live_verified=false`）。此时 `/health.linkage_claim` 多为 `L1`。
 
-### L2 联调（可选）
+### L2 真模型联调（可选）
 
-需本机 `enterprise-rag` 已在 `:8001` 健康（含模型），且契约版本一致。
+需本机 `enterprise-rag` 在 `:8001` 健康（含嵌入与生成模型），契约版本一致。
 
 ```text
 copy .env.demo .env
@@ -184,41 +139,38 @@ python scripts/demo_preflight.py --require-rag --smoke-run --contract
 python scripts/build_joint_evidence_pack.py --live
 ```
 
-联合包为 `evidence_tier=L2` 且 `live_verified=true` 时，才算真联调通过。以 `/health.runtime_mode` 区分 Standalone 与联调。
+只有联合包 `evidence_tier=L2` 且 `live_verified=true` 才算真联调通过。真 RAG 下 `/health.linkage_claim` 常见为 `http_live`（表示 HTTP 已通），**不要**把它当成 L2 标签；L2 看联合包字段。
 
 ## 验证分层
 
-日常看 Standalone 与 L1；接上真知识仓后再看 L2。
-
-| 层 | 可证明 | 入口 |
-|----|--------|------|
+| 层 | 能证明什么 | 怎么跑 |
+|----|------------|--------|
 | L0 | 离线门禁回归 | `ci.yml` / pytest |
-| Standalone | 无 `:8001` 时本仓可独立跑通 | `demo_preflight.py --standalone` |
-| L1 | HTTP 契约与提交归属 | `linkage-l1.yml` · `docker-compose.joint.yml` |
-| L2 | 真 RAG + 模型路径 | 本机 / `live-linkage.yml`（默认关闭） |
+| Standalone | 无 `:8001` 时本仓可跑通 | `demo_preflight.py --standalone` |
+| L1 | 契约与提交归属 | `linkage-l1.yml` · `docker-compose.joint.yml` |
+| L2 | 真 RAG + 模型路径 | 本机 · `live-linkage.yml`（默认关） |
 
-分层字段不要混用，约定见 `app/eval/evidence_tier.py`。`--from-artifacts` → `artifacts`（非 L2）；L1 下 `rag_mode=live` 只表示 HTTP 可达，≠ `live_verified`。
+字段约定见 `app/eval/evidence_tier.py`。历史快照或 `--from-artifacts` 不是 L2。
 
-## 场景与策略
+## 场景与主策略
 
-星沙 H103：SY215C 动臂无力 → 草稿 / 质检 / 配件预核 → 推荐件库存为 0 时走 POL-PARTS-01 进站长确认。触发条件是缺料，不是故障码表直触。步骤见 [DEMO_SCRIPT.md](DEMO_SCRIPT.md)。
-
-五条主策略（`CORE_POLICIES`，版 `2026-08-28.opt2`）：
+星沙 H103：SY215C 动臂无力 → 草稿与配件预核 → 推荐件库存为 0 时触发缺料确认（POL-PARTS-01）。触发点是缺料，不是故障码表直触。
 
 | 策略 | 作用 |
 |------|------|
-| `POL-ROLE-01` | 非站长不能直接 submit |
-| `POL-CONFLICT-01` | 质保/制度冲突并列展示，站长确认，系统不裁决 |
-| `POL-PARTS-01` | 缺料必须人确调拨或改约，禁止静默当有货开单 |
-| `POL-SLA-01` | 时效窗口进入快照，供确认时对照 |
-| `POL-DEGRADE-01` | 知识源降级时收紧自动路径，避免不完整或降级结果直接落箱 |
+| `POL-ROLE-01` | 非站长不能直接提交 |
+| `POL-CONFLICT-01` | 质保/制度冲突并列展示，站长确认 |
+| `POL-PARTS-01` | 缺料须确认调拨或改约 |
+| `POL-SLA-01` | 时效窗口写入快照，供确认时对照 |
+| `POL-DEGRADE-01` | 知识源降级时收紧自动路径 |
 
-完整文案与指纹：`app/policy/rules_catalog.py`。
+完整目录：`GET /policies` · `app/policy/rules_catalog.py`。
 
-## 范围与局限
+## 使用与局限
 
-- 使用：演示 API Key、`file_outbox` / mock inbox、JSON 配件台账、规则意图、Streamlit 联调台。
-- 不做：仓内 LLM / Multi-Agent 自主开单、生产 ERP/WMS/SSO、把 L0/L1 或历史快照说成 L2 Live。
+- 演示用 API Key：写路径须带 Header / body / 剧本内嵌；省略返回 401。
+- 配件台账为 JSON（可改 stock）；可选本地 mock WMS。
+- `/health` 里 `live_eval_artifacts_ok` 读仓内 JSON；`live_eval_all_ok` 仅当场 HTTP live 时为 true。
 
 ## 作者
 

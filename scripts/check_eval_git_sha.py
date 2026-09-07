@@ -10,10 +10,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-ARTIFACTS = (
+# L0 CI 会再生这三份；git_sha 必须与 HEAD 一致
+L0_REGENERATED = (
     ROOT / "data" / "eval" / "hitl_gate_report.json",
     ROOT / "data" / "eval" / "standalone_scorecard.json",
     ROOT / "data" / "eval" / "governance_scorecard.json",
+)
+# L1 / 联合包由 linkage 或本机 --live 生成；L0 作业不再生 → sha 漂移只 WARN
+OPTIONAL_LINKAGE = (
     ROOT / "data" / "eval" / "l1_linkage_report.json",
     ROOT / "data" / "eval" / "joint_evidence_pack.json",
 )
@@ -27,7 +31,7 @@ def main() -> int:
         print("[SKIP] not a git repo or git unavailable")
         return 0
     errs: list[str] = []
-    for path in ARTIFACTS:
+    for path in L0_REGENERATED:
         if not path.exists():
             continue
         try:
@@ -37,14 +41,26 @@ def main() -> int:
             continue
         recorded = data.get("git_sha")
         if not recorded:
-            # 联合包 / L1 报告若无 sha：仅警告（可能本机未装 git）；有 sha 则必须匹配
-            if path.name in {"joint_evidence_pack.json", "l1_linkage_report.json"}:
-                print(f"[WARN] {path.name}: missing git_sha（建议再生以钉版本）")
-                continue
             errs.append(f"{path.name}: missing git_sha — regenerate with CI scripts")
         elif recorded != head:
             errs.append(f"{path.name}: git_sha={recorded} ≠ HEAD={head}")
-        # 防伪：旧快照不得静默自称 L2 live
+    for path in OPTIONAL_LINKAGE:
+        if not path.exists():
+            continue
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            errs.append(f"{path.name}: unreadable ({exc})")
+            continue
+        recorded = data.get("git_sha")
+        if not recorded:
+            print(f"[WARN] {path.name}: missing git_sha（建议再生以钉版本）")
+        elif recorded != head:
+            print(
+                f"[WARN] {path.name}: git_sha={recorded} ≠ HEAD={head} "
+                "（L0 不再生；跑 linkage-l1 / build_joint_evidence_pack 更新）"
+            )
+        # 防伪：旧快照不得静默自称 L2 live（与 sha 是否匹配无关）
         if path.name == "joint_evidence_pack.json":
             tier = data.get("evidence_tier")
             if data.get("mode") == "from_artifacts" and (
@@ -60,9 +76,13 @@ def main() -> int:
     if errs:
         for e in errs:
             print(f"[FAIL] {e}")
-        print("hint: python scripts/run_hitl_gate_eval.py && python scripts/build_governance_scorecard.py --profile standalone")
+        print(
+            "hint: python scripts/run_hitl_gate_eval.py && "
+            "python scripts/build_governance_scorecard.py --profile standalone && "
+            "python scripts/build_governance_scorecard.py"
+        )
         return 1
-    print(f"[OK] eval artifacts git_sha={head}")
+    print(f"[OK] L0 eval artifacts git_sha={head}（L1/joint sha 漂移仅 WARN）")
     return 0
 
 

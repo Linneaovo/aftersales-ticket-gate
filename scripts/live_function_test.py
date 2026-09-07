@@ -135,7 +135,7 @@ def main() -> int:
         results.append(ok(CHECK_NAMES[12], (b1.get("playbook_meta") or {}).get("validation_passed") is True))
 
         if run_id:
-            tr = c.get(f"{BASE}/runs/{run_id}/trace")
+            tr = c.get(f"{BASE}/runs/{run_id}/trace", headers=TECH)
             nodes = [e["node"] for e in tr.json().get("events") or []]
             results.append(ok(CHECK_NAMES[13], tr.status_code == 200 and "hitl" in nodes))
         else:

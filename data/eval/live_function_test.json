@@ -2,9 +2,9 @@
   "script_version": "2026-08-28.p0",
   "checklist_hash": "d91c86f71ce4",
   "expected_total": 29,
-  "passed": 29,
+  "passed": 28,
   "total": 29,
-  "all_ok": true,
+  "all_ok": false,
   "oral_question": "星沙那边车子抬臂慢，客户催得紧",
   "mock_submit": {
     "destination": "rag_mock_inbox",

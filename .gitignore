@@ -9,6 +9,7 @@ data/checkpoints.db
 data/checkpoints.db-shm
 data/checkpoints.db-wal
 data/local/
+data/standalone_test_*
 data/eval/smoke_report.json
 # 弱生成物（非 CI 钉扎）；保留 standalone/hitl/intent/live_* 等验收证据
 data/eval/intent_weight_sensitivity.json
@@ -16,6 +17,8 @@ data/eval/plan_b_trace.json
 data/eval/replay_*.json
 data/eval/*.log
 data/eval/*_run.txt
+data/eval/l0_pytest_*.txt
+data/eval/rag_health_probe.json
 # 本机 Live 责任链报告（含本机绝对路径，不作仓内钉扎）
 data/eval/responsibility_chain_report.json
 .pytest_cache/

@@ -130,8 +130,9 @@ def run_parts_gate_ab_live(
                     "skip_reason": "copilot rag_mode≠live",
                 }
 
-            a_resp = c.post(f"{base}/playbooks/p1_xingsha_h103/run")
-            b_resp = c.post(f"{base}/playbooks/p1b_no_shortage_ready/run")
+            hdr = {"X-API-Key": "demo-technician"}
+            a_resp = c.post(f"{base}/playbooks/p1_xingsha_h103/run", headers=hdr)
+            b_resp = c.post(f"{base}/playbooks/p1b_no_shortage_ready/run", headers=hdr)
     except Exception as exc:  # noqa: BLE001
         return {
             "schema": "parts_gate_ab_live/v1",

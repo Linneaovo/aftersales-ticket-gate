@@ -5,9 +5,9 @@ from __future__ import annotations
 import subprocess
 
 # pytest --collect-only -q -m "not integration"
-PYTEST_OFFLINE_COLLECT = 366
+PYTEST_OFFLINE_COLLECT = 376
 # 含 @pytest.mark.integration 的全量 collect
-PYTEST_FULL_COLLECT = 374
+PYTEST_FULL_COLLECT = 384
 
 
 def resolve_git_sha() -> str | None:
