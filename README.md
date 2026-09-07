@@ -8,9 +8,6 @@
 
 检索和生成在姊妹仓 `enterprise-rag`（售后知识治理 Copilot）。本仓默认单仓可跑：本地 Fixture 知识源 + `file_outbox`，不必先起姊妹仓。接上真知识仓或契约桩属于联调加分。
 
-个人求职项目（linnea，2026-08）。仓库：https://github.com/Linneaovo/aftersales-ticket-gate  
-产品英文名 *After-Sales Ticket Gate Copilot*；本地目录仍可能是历史名 `aftersales-dispatch-copilot`。落箱一律 `is_production_ticket=false`。
-
 相关文档：[双仓](docs/DUAL_REPO.md) · [范围](docs/STANDALONE_SCOPE.md) · [边界](docs/BOUNDARY.md) · [演示](DEMO_SCRIPT.md) · [架构](ARCHITECTURE.md) · [契约](docs/RAG_COPILOT_CONTRACT.md)
 
 ## 做什么 / 不做什么
@@ -170,6 +167,7 @@ python scripts/build_joint_evidence_pack.py --live
 
 - 演示用 API Key：写路径须带 Header / body / 剧本内嵌；省略返回 401。
 - 配件台账为 JSON（可改 stock）；可选本地 mock WMS。
+- 落箱一律 `is_production_ticket=false`。
 - `/health` 里 `live_eval_artifacts_ok` 读仓内 JSON；`live_eval_all_ok` 仅当场 HTTP live 时为 true。
 
 ## 作者
